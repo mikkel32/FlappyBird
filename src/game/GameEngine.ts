@@ -635,24 +635,29 @@ export class GameEngine {
      }
 
      if (nextPipe) {
-         const targetY = nextPipe.gapY + currentPipeGap * 0.55; 
+         const gapCenter = nextPipe.gapY + currentPipeGap * 0.55; 
          
-         // Predict future position
-         const futureY = this.birdY + this.birdVelocity * 5;
+         // If we are way below the target (need to climb fast)
+         if (this.birdY > gapCenter + 40) {
+             // Flap earlier to climb faster (don't wait for velocity to be >= 0)
+             if (this.birdVelocity > -3) {
+                 this.flap();
+             }
+         } else if (this.birdY > gapCenter + 10) {
+             // Normal maintain level
+             if (this.birdVelocity >= 0 && this.birdY - 60 > nextPipe.gapY) {
+                 this.flap();
+             }
+         }
          
-         // If predicted to go below target and currently falling, flap
-         if (futureY > targetY && this.birdVelocity >= 0) {
-             this.flap();
-         } else if (this.birdY > nextPipe.gapY + currentPipeGap - 20) {
-             // Emergency flap to avoid bottom collision
-             this.flap();
-         } else if (nextPipe.x < birdX + 30 && this.birdY > nextPipe.gapY + currentPipeGap * 0.65) {
-             // Fine tuning when inside the pipe
+         // Emergency avoid bottom pipe
+         const futureY = this.birdY + this.birdVelocity * 3;
+         if (futureY > nextPipe.gapY + currentPipeGap - 18 && this.birdVelocity >= 0) {
              this.flap();
          }
      } else {
          // No pipes, stay around the middle
-         if (this.birdY + this.birdVelocity * 5 > this.height / 2) {
+         if (this.birdY > this.height / 2 && this.birdVelocity >= 0) {
              this.flap();
          }
      }
