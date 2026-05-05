@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isVerified() { return request.auth.token.email_verified == true; }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['createdAt']) &&
+             data.keys().hasAny(['createdAt', 'updatedAt', 'displayName']) &&
+             data.keys().size() <= 3 &&
+             (data.keys().hasAll(['displayName']) ? (data.displayName is string && data.displayName.size() <= 50) : true) &&
+             data.createdAt is timestamp &&
+             (data.keys().hasAll(['updatedAt']) ? data.updatedAt is timestamp : true);
+    }
+
+    function isValidBotModel(data) {
+      return data.keys().hasAll(['weights', 'score', 'generation', 'createdAt']) &&
+             data.keys().size() == 4 &&
+             data.weights is string && data.weights.size() <= 1000000 &&
+             data.score is number &&
+             data.generation is number &&
+             data.createdAt is timestamp;
+    }
+
+    // Paths
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      
+      allow create: if isSignedIn() && 
+                       isVerified() &&
+                       isValidId(userId) && 
+                       request.auth.uid == userId && 
+                       isValidUserProfile(incoming()) && 
+                       incoming().createdAt == request.time;
+                       
+      allow update: if isSignedIn() && 
+                       isVerified() &&
+                       request.auth.uid == userId && 
+                       isValidUserProfile(incoming()) && 
+                       incoming().createdAt == existing().createdAt &&
+                       (incoming().keys().hasAll(['updatedAt']) ? incoming().updatedAt == request.time : true) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']);
+                       
+      // NO LIST, NO DELETE
+      
+      match /bots/{botId} {
+        allow get: if isSignedIn() && request.auth.uid == userId;
+        
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        
+        allow create: if isSignedIn() && 
+                         isVerified() &&
+                         isValidId(userId) &&
+                         isValidId(botId) &&
+                         request.auth.uid == userId &&
+                         exists(/databases/$(database)/documents/users/$(userId)) &&
+                         isValidBotModel(incoming()) &&
+                         incoming().createdAt == request.time;
+                         
+        allow update: if false; // Bots are immutable snapshots of generations
+        allow delete: if isSignedIn() && request.auth.uid == userId; // Let them delete their own bots
+      }
+    }
+  }
+}

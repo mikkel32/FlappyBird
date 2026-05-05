@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX, Settings, Play, Trophy, Trash2, Pause, ArrowLeft, BarChart3, Medal, Bot } from 'lucide-react';
+import { Volume2, VolumeX, Settings, Play, Trophy, Trash2, Pause, ArrowLeft, BarChart3, Medal, Bot, HardDrive, X } from 'lucide-react';
 import { useGameStore, THEMES } from './store';
 import { audioContext } from './game/AudioEngine';
 import { GameEngine } from './game/GameEngine';
 
+import { AiMenu } from './components/AiMenu';
+import { NeuralNetwork } from './game/NeuralNetwork';
+
 export default function App() {
-  const { screen, score, highScore, themeId, sfxVolume, musicVolume, hasSeenTutorial, stats, achievements, autoPlay, setScreen, setScore, updateHighScore, setSfxVolume, setMusicVolume, setTheme, setAutoPlay, completeTutorial, updateStats, resetProgress } = useGameStore();
+  const { screen, score, highScore, themeId, sfxVolume, musicVolume, hasSeenTutorial, stats, achievements, autoPlay, loadedBrain, setScreen, setScore, updateHighScore, setSfxVolume, setMusicVolume, setTheme, setAutoPlay, completeTutorial, updateStats, resetProgress } = useGameStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
 
   // Layout calculations
   const [dimensions, setDimensions] = useState({ w: 400, h: 600 });
+  const [resetConfirm, setResetConfirm] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,8 +67,15 @@ export default function App() {
   useEffect(() => {
     if (engineRef.current) {
        engineRef.current.autoplay = autoPlay;
+       if (autoPlay && loadedBrain) {
+          try {
+             engineRef.current.brain = NeuralNetwork.deserialize(loadedBrain, 5, 8, 1);
+          } catch(e) { console.error('Failed to parse brain', e); }
+       } else {
+          engineRef.current.brain = null;
+       }
     }
-  }, [autoPlay]);
+  }, [autoPlay, loadedBrain]);
 
   // Sync high score on exact trigger of gameover
   useEffect(() => {
@@ -72,8 +83,12 @@ export default function App() {
       updateHighScore(score);
     } else if (screen === 'menu') {
       engineRef.current?.startIdle();
+    } else if (screen === 'playing' && engineRef.current && engineRef.current.state !== 'playing') {
+      setTimeout(() => {
+         engineRef.current?.start();
+      }, 0);
     }
-  }, [screen]);
+  }, [screen, score, updateHighScore]);
 
   const startGame = (botMode: boolean = false) => {
     setAutoPlay(botMode);
@@ -136,12 +151,20 @@ export default function App() {
               <span className="text-4xl text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]" style={{WebkitTextStroke: "2px black"}}>
                 {score}
               </span>
-              <button 
-                className="pointer-events-auto bg-black/40 p-3 rounded-full backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
-                onPointerDown={(e) => { e.stopPropagation(); engineRef.current?.togglePause(); }}
-              >
-                <Pause size={24} />
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  className="pointer-events-auto bg-black/40 p-3 rounded-full backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
+                  onPointerDown={(e) => { e.stopPropagation(); engineRef.current?.togglePause(); }}
+                >
+                  <Pause size={24} />
+                </button>
+                <button 
+                  className="pointer-events-auto bg-red-500/80 p-3 rounded-full backdrop-blur-sm text-white hover:bg-red-600 transition-colors"
+                  onPointerDown={(e) => { e.stopPropagation(); setAutoPlay(false); setScreen('menu'); }}
+                >
+                  <X size={24} />
+                </button>
+              </div>
             </div>
             {autoPlay && (
               <div className="text-center w-full mt-4">
@@ -156,45 +179,54 @@ export default function App() {
 
         {/* OVERLAYS */}
         {screen === 'menu' && (
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm flex flex-col items-center justify-center gap-8 p-6 z-20">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm flex flex-col items-center justify-center gap-6 p-6 z-20">
             <h1 className="text-4xl text-white text-center leading-tight drop-shadow-xl" style={{WebkitTextStroke: "1.5px black"}}>
               FLAPPY <br/><span className="text-yellow-400">CLONE</span>
             </h1>
-            <div className="flex flex-col gap-4 w-full max-w-[240px]">
+            <div className="flex flex-col gap-3 w-full max-w-[240px]">
               <button 
-                className="w-full bg-green-500 hover:bg-green-400 text-white py-4 rounded-xl shadow-[0_4px_0_#166534] active:shadow-[0_0px_0_#166534] active:translate-y-1 transition-all text-xl"
+                className="w-full bg-green-500 hover:bg-green-400 text-white py-4 rounded-xl shadow-[0_4px_0_#166534] active:shadow-[0_0px_0_#166534] active:translate-y-1 transition-all text-xl font-bold"
                 onClick={(e) => { e.stopPropagation(); startGame(); }}
               >
                 START GAME
               </button>
-              <div className="grid grid-cols-2 gap-4">
+              
+              <div className="grid grid-cols-2 gap-3">
                 <button 
-                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-3 rounded-xl shadow-[0_4px_0_#155e75] active:shadow-[0_0px_0_#155e75] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs"
+                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-3 rounded-xl shadow-[0_4px_0_#155e75] active:shadow-[0_0px_0_#155e75] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs font-bold"
                   onClick={(e) => { e.stopPropagation(); startGame(true); }}
                 >
-                  <Bot size={20} /> WATCH BOT
+                  <Bot size={20} /> BASIC BOT
                 </button>
                 <button 
-                  className="w-full bg-blue-500 hover:bg-blue-400 text-white py-3 rounded-xl shadow-[0_4px_0_#1e3a8a] active:shadow-[0_0px_0_#1e3a8a] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs"
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl shadow-[0_4px_0_#3730a3] active:shadow-[0_0px_0_#3730a3] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs font-bold"
+                  onClick={(e) => { e.stopPropagation(); setScreen('aiMenu'); }}
+                >
+                  <HardDrive size={20} /> AI LAB
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  className="w-full bg-blue-500 hover:bg-blue-400 text-white py-3 rounded-xl shadow-[0_4px_0_#1e3a8a] active:shadow-[0_0px_0_#1e3a8a] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs font-bold"
                   onClick={(e) => { e.stopPropagation(); setScreen('stats'); }}
                 >
                   <BarChart3 size={20} /> STATS
                 </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <button 
-                  className="w-full bg-purple-500 hover:bg-purple-400 text-white py-3 rounded-xl shadow-[0_4px_0_#581c87] active:shadow-[0_0px_0_#581c87] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs"
+                  className="w-full bg-purple-500 hover:bg-purple-400 text-white py-3 rounded-xl shadow-[0_4px_0_#581c87] active:shadow-[0_0px_0_#581c87] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs font-bold"
                   onClick={(e) => { e.stopPropagation(); setScreen('achievements'); }}
                 >
                   <Medal size={20} /> MEDALS
                 </button>
-                <button 
-                  className="w-full bg-neutral-600 hover:bg-neutral-500 text-white py-3 rounded-xl shadow-[0_4px_0_#262626] active:shadow-[0_0px_0_#262626] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs"
-                  onClick={(e) => { e.stopPropagation(); setScreen('settings'); }}
-                >
-                  <Settings size={20} /> SETTINGS
-                </button>
               </div>
+
+              <button 
+                className="w-full bg-neutral-600 hover:bg-neutral-500 text-white py-3 rounded-xl shadow-[0_4px_0_#262626] active:shadow-[0_0px_0_#262626] active:translate-y-1 transition-all flex items-center justify-center gap-2 text-xs font-bold"
+                onClick={(e) => { e.stopPropagation(); setScreen('settings'); }}
+              >
+                <Settings size={20} /> SETTINGS
+              </button>
             </div>
           </div>
         )}
@@ -209,6 +241,8 @@ export default function App() {
             </p>
           </div>
         )}
+
+        {screen === 'aiMenu' && <AiMenu />}
 
         {screen === 'gameover' && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 gap-6">
@@ -345,18 +379,39 @@ export default function App() {
               </div>
 
               <div className="flex flex-col gap-4 mt-auto">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm("Reset all progress and themes?")) {
-                      resetProgress();
-                      alert("Progress reset!");
-                    }
-                  }}
-                  className="flex items-center justify-center gap-2 w-full p-4 border-2 border-red-900 text-red-500 rounded-xl hover:bg-red-950/30 text-xs"
-                >
-                  <Trash2 size={16} /> CLEAR SAVE DATA
-                </button>
+                {resetConfirm ? (
+                  <div className="flex gap-2 w-full">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        resetProgress();
+                        setResetConfirm(false);
+                      }}
+                      className="flex-1 p-4 border border-red-500 bg-red-950/30 text-red-500 rounded-xl hover:bg-red-900/50 text-xs font-bold"
+                    >
+                      CONFIRM RESET
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setResetConfirm(false);
+                      }}
+                      className="flex-1 p-4 border border-neutral-700 bg-neutral-800 text-white rounded-xl hover:bg-neutral-700 text-xs font-bold"
+                    >
+                      CANCEL
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setResetConfirm(true);
+                    }}
+                    className="flex items-center justify-center gap-2 w-full p-4 border-2 border-red-900 text-red-500 rounded-xl hover:bg-red-950/30 text-xs"
+                  >
+                    <Trash2 size={16} /> CLEAR SAVE DATA
+                  </button>
+                )}
               </div>
             </div>
           </div>

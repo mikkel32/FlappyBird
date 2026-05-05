@@ -1,5 +1,6 @@
 import { THEMES } from '../store';
 import { audioContext } from './AudioEngine';
+import { NeuralNetwork } from './NeuralNetwork';
 
 export class GameEngine {
   public canvas: HTMLCanvasElement;
@@ -40,6 +41,7 @@ export class GameEngine {
   // Appearance
   private theme = THEMES.classic;
   public autoplay = false;
+  public brain: NeuralNetwork | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -80,6 +82,7 @@ export class GameEngine {
   }
 
   public startIdle() {
+    cancelAnimationFrame(this.reqId);
     this.state = 'idle';
     this.birdY = this.height / 2;
     this.birdVelocity = 0;
@@ -93,6 +96,7 @@ export class GameEngine {
   }
 
   public start() {
+    cancelAnimationFrame(this.reqId);
     this.state = 'playing';
     this.birdY = this.height / 2;
     this.birdVelocity = 0;
@@ -117,6 +121,8 @@ export class GameEngine {
     this.paused = !this.paused;
     if (!this.paused) {
       this.loop();
+    } else {
+      this.draw();
     }
   }
 
@@ -614,6 +620,24 @@ export class GameEngine {
       this.ctx.fillStyle = `rgba(255, 255, 255, ${this.flashFrames * 0.15})`;
       this.ctx.fillRect(0, 0, this.width, this.height);
     }
+    
+    if (this.paused && this.state === 'playing') {
+       this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+       this.ctx.fillRect(0, 0, this.width, this.height);
+       
+       this.ctx.font = 'bold 36px "Courier New", Courier, monospace';
+       this.ctx.fillStyle = '#fff';
+       this.ctx.textAlign = 'center';
+       this.ctx.textBaseline = 'middle';
+       this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
+       this.ctx.shadowBlur = 4;
+       this.ctx.shadowOffsetX = 2;
+       this.ctx.shadowOffsetY = 2;
+       this.ctx.fillText('PAUSED', this.width / 2, this.height / 2);
+       this.ctx.shadowBlur = 0;
+       this.ctx.shadowOffsetX = 0;
+       this.ctx.shadowOffsetY = 0;
+    }
   }
 
   private triggerGameOver() {
@@ -632,6 +656,21 @@ export class GameEngine {
              nextPipe = p;
              break;
          }
+     }
+
+     if (this.brain && nextPipe) {
+        const inputs = [
+          this.birdY / this.height,
+          this.birdVelocity / 10,
+          nextPipe.gapY / this.height,
+          (nextPipe.gapY + currentPipeGap) / this.height,
+          nextPipe.x / this.width
+        ];
+        const output = this.brain.predict(inputs);
+        if (output[0] > 0.5) {
+          this.flap();
+        }
+        return;
      }
 
      if (nextPipe) {

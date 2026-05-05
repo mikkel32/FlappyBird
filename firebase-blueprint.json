@@ -1,0 +1,37 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["createdAt"]
+    },
+    "BotModel": {
+      "title": "BotModel",
+      "description": "Neural network parameters for a trained bot",
+      "type": "object",
+      "properties": {
+        "weights": { "type": "string", "description": "Serialized weights string" },
+        "score": { "type": "number" },
+        "generation": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["weights", "score", "generation", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores user profiles"
+    },
+    "/users/{userId}/bots/{botId}": {
+      "schema": { "$ref": "#/entities/BotModel" },
+      "description": "Stores the trained bot models for each user"
+    }
+  }
+}

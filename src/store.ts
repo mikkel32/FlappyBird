@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { User } from 'firebase/auth';
 
-export type ScreenState = 'menu' | 'playing' | 'gameover' | 'settings' | 'tutorial' | 'stats' | 'achievements';
+export type ScreenState = 'menu' | 'playing' | 'gameover' | 'settings' | 'tutorial' | 'stats' | 'achievements' | 'aiMenu';
 
 export const THEMES = {
   classic: { id: 'classic', name: 'Classic Day', bg: '#70c5ce', bgBottom: '#b4e1e6', cloudColor: 'rgba(255,255,255,0.6)', pipeTop: '#73bf2e', pipeBottom: '#73bf2e', pipeBorder: '#558022', birdBody: '#e8c92a', birdWing: '#fdfdfd', groundTop: '#ded895', groundBottom: '#e0d890', groundBorder: '#554215', mtnBack: '#8ed9df', mtnFront: '#a5e9cd', cityscape: false, hasStars: false },
@@ -27,6 +28,10 @@ interface GameState {
   stats: GameStats;
   achievements: string[];
   autoPlay: boolean;
+  isAiTraining: boolean;
+  user: User | null;
+  botId: string | null;
+  loadedBrain: string | null;
   setScreen: (screen: ScreenState) => void;
   setScore: (score: number) => void;
   updateHighScore: (score: number) => void;
@@ -34,6 +39,10 @@ interface GameState {
   setMusicVolume: (vol: number) => void;
   setTheme: (themeId: keyof typeof THEMES) => void;
   setAutoPlay: (auto: boolean) => void;
+  setIsAiTraining: (ai: boolean) => void;
+  setUser: (user: User | null) => void;
+  setBotId: (id: string | null) => void;
+  setLoadedBrain: (brain: string | null) => void;
   completeTutorial: () => void;
   updateStats: (jumps: number, score: number) => void;
   resetProgress: () => void;
@@ -52,6 +61,10 @@ export const useGameStore = create<GameState>()(
       stats: { gamesPlayed: 0, totalJumps: 0, totalScore: 0 },
       achievements: [],
       autoPlay: false,
+      isAiTraining: false,
+      user: null as any, // Don't persist user object fully, ignore it from persist later, or handle auth directly
+      botId: null,
+      loadedBrain: null,
       setScreen: (screen) => set({ screen }),
       setScore: (score) => set({ score }),
       updateHighScore: (score) => set((state) => ({ highScore: Math.max(state.highScore, score) })),
@@ -59,6 +72,10 @@ export const useGameStore = create<GameState>()(
       setMusicVolume: (vol) => set({ musicVolume: vol }),
       setTheme: (themeId) => set({ themeId }),
       setAutoPlay: (auto) => set({ autoPlay: auto }),
+      setIsAiTraining: (ai) => set({ isAiTraining: ai }),
+      setUser: (user) => set({ user }),
+      setBotId: (id) => set({ botId: id }),
+      setLoadedBrain: (brain) => set({ loadedBrain: brain }),
       completeTutorial: () => set({ hasSeenTutorial: true }),
       updateStats: (jumps, score) => set((state) => {
         const newStats = {
