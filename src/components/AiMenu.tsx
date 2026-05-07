@@ -236,26 +236,24 @@ export function AiMenu() {
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-neutral-900 bg-opacity-95 text-white flex flex-col items-center justify-start p-6 overflow-y-auto w-full h-full">
+    <div className="absolute inset-0 z-50 overlay-dark text-white flex flex-col items-center justify-start p-6 overflow-y-auto w-full h-full animate-fade-in-scale">
       {toast && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-full font-bold shadow-lg transition-all animate-in slide-in-from-top-4 fade-in duration-300 ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-full font-bold shadow-lg transition-all animate-fade-in-scale ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
           {toast.msg}
         </div>
       )}
-      <div className="w-full max-w-md flex flex-col gap-6">
-        <div className="flex items-center gap-4">
-          <button onClick={() => setScreen('menu')} className="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700">
-            <ArrowLeft size={24} />
+      <div className="w-full max-w-md flex flex-col gap-6 glass-panel p-6">
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-3xl font-black text-cyan-400 drop-shadow-md">AI Laboratory</h2>
+          <button className="text-white bg-transparent border-none cursor-pointer" onClick={() => setScreen('menu')}>
+            <span className="text-2xl">&times;</span>
           </button>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Bot className="text-cyan-400" /> AI Laboratory
-          </h2>
         </div>
 
         {!user ? (
-          <div className="bg-neutral-800 p-6 rounded-xl flex flex-col gap-4 text-center">
-            <p className="text-neutral-400">Sign in to train and save genetic models in the cloud.</p>
-            <button onClick={login} className="bg-cyan-600 hover:bg-cyan-500 text-white py-3 rounded-xl flex items-center justify-center gap-2">
+          <div className="flex flex-col gap-4 text-center mt-4">
+            <p className="text-white/70">Sign in to train and save genetic models in the cloud.</p>
+            <button onClick={login} className="btn btn-secondary flex items-center justify-center gap-2 mt-2">
               <LogIn size={20} /> Sign in with Google
             </button>
           </div>
@@ -270,46 +268,47 @@ export function AiMenu() {
             </div>
 
             {training ? (
-              <div className="flex flex-col gap-4 relative">
-                 <div className="aspect-[4/7] w-full max-h-[60vh] mx-auto bg-black rounded-xl overflow-hidden relative border border-cyan-800/50">
+              <div className="flex flex-col gap-6 relative mt-4">
+                 <div className="w-full aspect-[4/7] max-h-[60vh] mx-auto rounded-xl overflow-hidden relative shadow-inner bg-black border-[3px] border-cyan-500">
                     <canvas ref={trainingCanvasRef} width={400} height={700} className="w-full h-full object-contain" />
-                    <div className="absolute top-2 left-2 flex flex-col gap-1">
+                    <div className="absolute top-2 left-2 flex flex-col gap-2">
                        <div className="flex gap-2">
-                         <span className="bg-black/50 px-2 py-1 rounded text-xs">Gen: {generation}</span>
-                         <span className="bg-black/50 px-2 py-1 rounded text-xs">Score: {maxScore}</span>
-                         <span className="bg-black/50 px-2 py-1 rounded text-xs">Alive: {alive}</span>
+                         <span className="bg-black/60 px-3 py-1 rounded-md text-xs font-mono font-bold tracking-wide">Gen: {generation}</span>
+                         <span className="bg-black/60 px-3 py-1 rounded-md text-xs font-mono font-bold tracking-wide">Score: {maxScore}</span>
+                         <span className="bg-green-500/80 px-3 py-1 rounded-md text-xs font-mono font-bold tracking-wide">Alive: {alive}</span>
                        </div>
                        {allTimeBestScore > 0 && (
-                         <div className="flex gap-2 text-cyan-300">
-                           <span className="bg-black/50 px-2 py-1 rounded text-[10px] font-bold border border-cyan-900/50">
+                         <div className="flex gap-2 text-yellow-300">
+                           <span className="bg-black/60 px-3 py-1 rounded-md text-[10px] font-mono font-bold tracking-wide border border-yellow-500/50">
                              Best: {allTimeBestScore} (from Gen {allTimeBestGen})
                            </span>
                          </div>
                        )}
                     </div>
                  </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <button 
                       onClick={togglePause}
-                      className={`flex-1 ${isPaused ? 'bg-green-600 hover:bg-green-500' : 'bg-amber-600 hover:bg-amber-500'} py-3 rounded-xl font-bold transition-colors`}
+                      className={`btn flex-1 flex items-center justify-center ${isPaused ? 'bg-green-500 text-green-950' : 'bg-amber-500 text-amber-950'}`}
+                      style={{boxShadow: `0 6px 0 ${isPaused ? '#16a34a' : '#d97706'}`}}
                     >
                       {isPaused ? 'Resume' : 'Pause'}
                     </button>
-                    <button onClick={stopTraining} className="flex-1 bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold">Stop</button>
-                    <button onClick={saveBest} className="flex-1 bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                    <button onClick={stopTraining} className="btn flex-1 bg-red-500 text-red-950 flex items-center justify-center gap-2" style={{boxShadow: '0 6px 0 #dc2626'}}>
+                      <Save size={18} /> Stop
+                    </button>
+                    <button onClick={saveBest} className="btn flex-1 btn-primary flex items-center justify-center gap-2">
                       <Save size={18} /> Save Best
                     </button>
                   </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-4">
-                <div className="bg-neutral-800 p-4 rounded-xl flex flex-col gap-4 border border-neutral-700/50">
-                  <h3 className="font-bold text-lg text-cyan-400">Training Config</h3>
-                  
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm text-neutral-400 flex justify-between">
-                      <span>Batch Size (Birds)</span>
-                      <span className="text-white font-mono">{batchSize}</span>
+              <div className="flex flex-col gap-6 mt-4">
+                <div className="flex flex-col gap-4 font-semibold text-white/90">                  
+                  <div className="setting-slider">
+                    <label className="flex justify-between items-center">
+                      <span className="text-sm">Batch Size</span>
+                      <span className="font-mono bg-white/10 px-2 py-1 rounded">{(batchSize)}</span>
                     </label>
                     <input 
                       type="range" 
@@ -318,14 +317,14 @@ export function AiMenu() {
                       step="10" 
                       value={batchSize} 
                       onChange={(e) => setBatchSize(Number(e.target.value))} 
-                      className="accent-cyan-500"
+                      className="w-full mt-2"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm text-neutral-400 flex justify-between">
-                      <span>Mutation Rate (%)</span>
-                      <span className="text-white font-mono">{mutationRate}%</span>
+                  <div className="setting-slider">
+                    <label className="flex justify-between items-center">
+                      <span className="text-sm">Mutation (%)</span>
+                      <span className="font-mono bg-white/10 px-2 py-1 rounded">{mutationRate}%</span>
                     </label>
                     <input 
                       type="range" 
@@ -333,14 +332,14 @@ export function AiMenu() {
                       max="100" 
                       value={mutationRate} 
                       onChange={(e) => setMutationRate(Number(e.target.value))} 
-                      className="accent-cyan-500"
+                      className="w-full mt-2"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm text-neutral-400 flex justify-between">
-                      <span>Elitism Count</span>
-                      <span className="text-white font-mono">{elitism}</span>
+                  <div className="setting-slider">
+                    <label className="flex justify-between items-center">
+                      <span className="text-sm">Elitism</span>
+                      <span className="font-mono bg-white/10 px-2 py-1 rounded">{elitism}</span>
                     </label>
                     <input 
                       type="range" 
@@ -348,12 +347,12 @@ export function AiMenu() {
                       max={Math.floor(batchSize * 0.5)} 
                       value={Math.min(elitism, Math.floor(batchSize * 0.5))} 
                       onChange={(e) => setElitism(Number(e.target.value))} 
-                      className="accent-cyan-500"
+                      className="w-full mt-2"
                     />
                   </div>
                 </div>
 
-                <button onClick={() => startTraining()} className="w-full bg-cyan-600 hover:bg-cyan-500 py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-[0_4px_0_#155e75] active:translate-y-1 active:shadow-none transition-all">
+                <button onClick={() => startTraining()} className="btn btn-secondary flex items-center justify-center gap-2">
                   <Play size={20} /> START TRAINING
                 </button>
               </div>

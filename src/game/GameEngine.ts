@@ -48,6 +48,20 @@ export class PerfectMechanicalBot {
   }
 }
 
+export class Particle {
+  x: number; y: number; vx: number; vy: number; life: number; color: string;
+  constructor(x: number, y: number, color: string) {
+    this.x = x; this.y = y;
+    this.vx = (Math.random() - 0.5) * 6;
+    this.vy = (Math.random() - 0.5) * 6 - 2; // slight upward bias
+    this.life = 1.0;
+    this.color = color;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy; this.life -= 0.03;
+  }
+}
+
 export class GameEngine {
   public canvas: HTMLCanvasElement;
   public ctx: CanvasRenderingContext2D;
@@ -63,6 +77,7 @@ export class GameEngine {
   private height: number;
   private groundHeight = 100;
   private gravity = 0.45;
+  private terminalVelocity = 12;
   private jumpStrength = -8;
   private basePipeSpeed = 1.5;
   private basePipeGap = 160;
@@ -72,6 +87,7 @@ export class GameEngine {
   private birdVelocity = 0;
   private birdRotation = 0;
   private pipes: Array<{ x: number, gapY: number }> = [];
+  private particles: Particle[] = [];
   private score = 0;
   private currentJumps = 0;
   private frames = 0;
@@ -149,6 +165,7 @@ export class GameEngine {
     this.birdVelocity = 0;
     this.birdRotation = 0;
     this.pipes = [];
+    this.particles = [];
     this.score = 0;
     this.currentJumps = 0;
     this.frames = 0;
@@ -184,7 +201,14 @@ export class GameEngine {
     this.birdRotation = -Math.PI / 4; // Point up
     this.currentJumps++;
     this.flapCooldown = 8;
+    this.spawnParticles(40, this.birdY, '#ffffff', 5);
     audioContext.playFlap();
+  }
+
+  private spawnParticles(x: number, y: number, color: string, count: number) {
+    for (let i = 0; i < count; i++) {
+       this.particles.push(new Particle(x, y, color));
+    }
   }
 
   private loop = () => {
@@ -276,7 +300,17 @@ export class GameEngine {
     // Bird physics
     if (this.flapCooldown > 0) this.flapCooldown--;
     this.birdVelocity += this.gravity;
+    if (this.birdVelocity > this.terminalVelocity) {
+       this.birdVelocity = this.terminalVelocity;
+    }
     this.birdY += this.birdVelocity;
+
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      this.particles[i].update();
+      if (this.particles[i].life <= 0) {
+        this.particles.splice(i, 1);
+      }
+    }
 
     if (this.autoplay && !this.isDead && this.state === 'playing') {
        this.doAutoplayLogic(currentPipeGap, floorY);
@@ -572,6 +606,16 @@ export class GameEngine {
     }
     this.ctx.stroke();
 
+    // Draw Particles
+    for (const pt of this.particles) {
+      this.ctx.fillStyle = pt.color;
+      this.ctx.globalAlpha = Math.max(0, pt.life);
+      this.ctx.beginPath();
+      this.ctx.arc(pt.x, pt.y, 2 + pt.life * 2, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+    this.ctx.globalAlpha = 1.0;
+
     // Bird
     this.ctx.save();
     this.ctx.translate(40, this.birdY);
@@ -695,6 +739,7 @@ export class GameEngine {
     this.isDead = true;
     this.flashFrames = 5;
     this.birdVelocity = Math.max(-4, Number(this.birdVelocity) - 4); // Small bounce up when dying
+    this.spawnParticles(40, this.birdY, '#ff4444', 30);
     audioContext.playCrash();
   }
 

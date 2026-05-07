@@ -165,42 +165,42 @@ export default function App() {
 
         {/* OVERLAYS */}
         {screen === 'menu' && (
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm flex flex-col items-center justify-center gap-6 p-6 z-20">
-            <h1 className="text-4xl text-white text-center leading-tight drop-shadow-xl" style={{WebkitTextStroke: "1.5px black"}}>
-              FLAPPY <br/><span className="text-yellow-400">CLONE</span>
+          <div className="absolute inset-0 overlay-glass flex flex-col items-center justify-center p-6 z-20 animate-fade-in-scale">
+            <h1 className="text-5xl font-black text-yellow-400 text-center leading-tight drop-shadow-xl mb-10 -rotate-3" style={{WebkitTextStroke: "2px #b45309"}}>
+              FLAPPY <br/><span className="text-white">CLONE</span>
             </h1>
-            <div className="flex flex-col gap-3 w-full max-w-[240px]">
+            <div className="flex flex-col gap-4 w-full max-w-[280px]">
               <button 
-                className="w-full bg-green-500 hover:bg-green-400 text-white py-4 rounded-xl shadow-[0_4px_0_#166534] active:shadow-[0_0px_0_#166534] active:translate-y-1 transition-all text-xl font-bold"
+                className="btn btn-primary text-xl"
                 onClick={(e) => { e.stopPropagation(); startGame(); }}
               >
                 START GAME
               </button>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <button 
-                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-3 rounded-xl shadow-[0_4px_0_#155e75] active:shadow-[0_0px_0_#155e75] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs font-bold"
+                  className="btn btn-secondary flex items-center justify-center gap-2 text-sm"
                   onClick={(e) => { e.stopPropagation(); startGame(true); }}
                 >
-                  <Bot size={20} /> BASIC BOT
+                  <Bot size={20} /> BOT
                 </button>
                 <button 
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl shadow-[0_4px_0_#3730a3] active:shadow-[0_0px_0_#3730a3] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs font-bold"
+                  className="btn btn-outline bg-indigo-900/50 flex items-center justify-center gap-2 text-sm"
                   onClick={(e) => { e.stopPropagation(); setScreen('aiMenu'); }}
                 >
-                  <HardDrive size={20} /> AI LAB
+                  <HardDrive size={20} /> LAB
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4 mt-2">
                 <button 
-                  className="w-full bg-blue-500 hover:bg-blue-400 text-white py-3 rounded-xl shadow-[0_4px_0_#1e3a8a] active:shadow-[0_0px_0_#1e3a8a] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs font-bold"
+                  className="btn btn-outline bg-blue-900/50 flex flex-col items-center justify-center p-3 gap-1 text-xs"
                   onClick={(e) => { e.stopPropagation(); setScreen('stats'); }}
                 >
                   <BarChart3 size={20} /> STATS
                 </button>
                 <button 
-                  className="w-full bg-purple-500 hover:bg-purple-400 text-white py-3 rounded-xl shadow-[0_4px_0_#581c87] active:shadow-[0_0px_0_#581c87] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 text-xs font-bold"
+                  className="btn btn-outline bg-purple-900/50 flex flex-col items-center justify-center p-3 gap-1 text-xs"
                   onClick={(e) => { e.stopPropagation(); setScreen('achievements'); }}
                 >
                   <Medal size={20} /> MEDALS
@@ -208,7 +208,7 @@ export default function App() {
               </div>
 
               <button 
-                className="w-full bg-neutral-600 hover:bg-neutral-500 text-white py-3 rounded-xl shadow-[0_4px_0_#262626] active:shadow-[0_0px_0_#262626] active:translate-y-1 transition-all flex items-center justify-center gap-2 text-xs font-bold"
+                className="btn btn-outline bg-neutral-900/50 flex items-center justify-center gap-2 text-sm mt-2"
                 onClick={(e) => { e.stopPropagation(); setScreen('settings'); }}
               >
                 <Settings size={20} /> SETTINGS
@@ -231,33 +231,33 @@ export default function App() {
         {screen === 'aiMenu' && <AiMenu />}
 
         {screen === 'gameover' && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 gap-6">
-            <h2 className="text-4xl text-red-500 mb-4 drop-shadow-[0_4px_0_#7f1d1d]">GAME OVER</h2>
+          <div className="absolute inset-0 overlay-dark flex flex-col items-center justify-center p-6 gap-8 animate-fade-in-scale z-30">
+            <h2 className="text-5xl font-black text-red-500 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" style={{WebkitTextStroke: "2px #7f1d1d"}}>GAME OVER</h2>
             
-            <div className="bg-[#e2c179] border-4 border-[#936625] rounded-xl p-6 w-full max-w-[300px] flex flex-col items-center gap-4 text-[#754c24]">
-              <div className="text-center w-full">
-                <p className="text-xs mb-2">SCORE</p>
-                <p className="text-4xl text-white drop-shadow-[0_2px_0_#754c24]">{score}</p>
+            <div className="glass-panel p-6 w-full max-w-[280px] flex flex-col items-center gap-6">
+              <div className="flex justify-between items-center w-full uppercase font-bold tracking-wider">
+                <span className="text-white/80">Score</span>
+                <span className="text-3xl font-black text-white">{score}</span>
               </div>
-              <div className="w-full h-1 bg-[#c29d5b] rounded-full"></div>
-              <div className="text-center w-full">
-                <p className="text-xs mb-2 text-red-800">BEST</p>
-                <p className="text-2xl text-white drop-shadow-[0_2px_0_#754c24]">{Math.max(score, highScore)}</p>
+              <div className="w-full h-px bg-white/20"></div>
+              <div className="flex justify-between items-center w-full uppercase font-bold tracking-wider">
+                <span className="text-yellow-400">Best</span>
+                <span className="text-3xl font-black text-yellow-400">{Math.max(score, highScore)}</span>
               </div>
             </div>
 
-            <div className="flex gap-4 mt-4">
+            <div className="flex gap-4 mt-2 w-full max-w-[280px]">
               <button 
-                className="bg-green-500 p-4 rounded-full text-white shadow-[0_4px_0_#166534] active:translate-y-1 active:shadow-none hover:bg-green-400"
+                className="btn btn-primary flex-1 flex items-center justify-center"
                 onClick={(e) => { e.stopPropagation(); startGame(); }}
               >
-                <Play size={32} fill="currentColor" />
+                PLAY AGAIN
               </button>
               <button 
-                className="bg-blue-500 p-4 rounded-full text-white shadow-[0_4px_0_#1e3a8a] active:translate-y-1 active:shadow-none hover:bg-blue-400"
+                className="btn btn-outline p-4 flex items-center justify-center"
                 onClick={(e) => { e.stopPropagation(); setScreen('menu'); }}
               >
-                <Settings size={32} />
+                <Settings size={24} />
               </button>
             </div>
           </div>
