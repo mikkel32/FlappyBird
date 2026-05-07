@@ -134,7 +134,7 @@ export default function App() {
         {screen === 'playing' && (
           <div className="absolute top-8 left-0 w-full flex flex-col px-6 z-10 pointer-events-none gap-4">
             <div className="flex justify-between items-start w-full">
-              <span className="text-4xl text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]" style={{WebkitTextStroke: "2px black"}}>
+              <span key={score} className="text-4xl text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] animate-score-bump inline-block origin-top-left" style={{WebkitTextStroke: "2px black"}}>
                 {score}
               </span>
               <div className="flex gap-2">
@@ -165,64 +165,74 @@ export default function App() {
 
         {/* OVERLAYS */}
         {screen === 'menu' && (
-          <div className="absolute inset-0 overlay-glass flex flex-col items-center justify-center p-6 z-20 animate-fade-in-scale">
-            <h1 className="text-5xl font-black text-yellow-400 text-center leading-tight drop-shadow-xl mb-10 -rotate-3" style={{WebkitTextStroke: "2px #b45309"}}>
-              FLAPPY <br/><span className="text-white">CLONE</span>
-            </h1>
-            <div className="flex flex-col gap-4 w-full max-w-[280px]">
-              <button 
-                className="btn btn-primary text-xl"
-                onClick={(e) => { e.stopPropagation(); startGame(); }}
-              >
-                START GAME
-              </button>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 z-20 animate-fade-in-scale">
+            <div className="absolute inset-0 bg-sky-900/10 backdrop-blur-[1px] z-0"></div>
+            
+            <div className="z-10 flex flex-col items-center w-full max-w-[320px]">
+              <h1 className="text-4xl font-black text-white text-center leading-[1.1] tracking-widest drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)] mb-8 -rotate-3" style={{WebkitTextStroke: "2px #553811", textShadow: "0 4px 0 #553811, 0 6px 8px rgba(0,0,0,0.5)"}}>
+                FLAPPY<br/>
+                <span className="text-[#facc15]" style={{WebkitTextStroke: "2px #ca8a04", textShadow: "0 4px 0 #ca8a04, 0 6px 8px rgba(0,0,0,0.5)"}}>CLONE</span>
+              </h1>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-4 w-full">
                 <button 
-                  className="btn btn-secondary flex items-center justify-center gap-2 text-sm"
-                  onClick={(e) => { e.stopPropagation(); startGame(true); }}
+                  className="bg-green-500 hover:bg-green-400 text-white w-full py-5 text-3xl rounded-2xl border-b-[8px] border-green-700 active:border-b-0 active:mt-[8px] active:mb-[-8px] flex items-center justify-center font-black tracking-widest transition-all shadow-[0_10px_20px_rgba(0,0,0,0.4)] active:shadow-none animate-pulse hover:animate-none"
+                  onClick={(e) => { e.stopPropagation(); startGame(); }}
+                  style={{WebkitTextStroke: "2px #14532d", textShadow: "3px 3px 0 #14532d"}}
                 >
-                  <Bot size={20} /> BOT
+                  <Play className="mr-3" size={32} fill="currentColor" strokeWidth={2} stroke="#14532d" /> PLAY
                 </button>
+                
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <button 
+                    className="bg-blue-500 hover:bg-blue-400 text-white w-full py-4 text-lg rounded-2xl border-b-[6px] border-blue-700 active:border-b-0 active:mt-[6px] active:mb-[-6px] flex items-center justify-center font-black tracking-widest transition-all shadow-[0_6px_15px_rgba(0,0,0,0.3)] active:shadow-none"
+                    onClick={(e) => { e.stopPropagation(); startGame(true); }}
+                    style={{WebkitTextStroke: "1px #1e3a8a", textShadow: "2px 2px 0 #1e3a8a"}}
+                  >
+                    <Bot className="mr-2" size={24} strokeWidth={2} /> BOT
+                  </button>
+                  <button 
+                    className="bg-purple-500 hover:bg-purple-400 text-white w-full py-4 text-lg rounded-2xl border-b-[6px] border-purple-700 active:border-b-0 active:mt-[6px] active:mb-[-6px] flex items-center justify-center font-black tracking-widest transition-all shadow-[0_6px_15px_rgba(0,0,0,0.3)] active:shadow-none"
+                    onClick={(e) => { e.stopPropagation(); setScreen('aiMenu'); }}
+                    style={{WebkitTextStroke: "1px #3b0764", textShadow: "2px 2px 0 #3b0764"}}
+                  >
+                    <HardDrive className="mr-2" size={24} strokeWidth={2} /> LAB
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <button 
+                    className="bg-[#c3b97b] hover:bg-[#ded895] text-[#553811] w-full py-3 text-sm rounded-2xl border-b-[6px] border-[#928641] active:border-b-0 active:mt-[6px] active:mb-[-6px] flex flex-col items-center justify-center font-black tracking-widest transition-all shadow-[0_6px_15px_rgba(0,0,0,0.3)] active:shadow-none"
+                    onClick={(e) => { e.stopPropagation(); setScreen('stats'); }}
+                  >
+                    <BarChart3 className="mb-1" size={20} strokeWidth={3} /> STATS
+                  </button>
+                  <button 
+                    className="bg-[#c3b97b] hover:bg-[#ded895] text-[#553811] w-full py-3 text-sm rounded-2xl border-b-[6px] border-[#928641] active:border-b-0 active:mt-[6px] active:mb-[-6px] flex flex-col items-center justify-center font-black tracking-widest transition-all shadow-[0_6px_15px_rgba(0,0,0,0.3)] active:shadow-none"
+                    onClick={(e) => { e.stopPropagation(); setScreen('achievements'); }}
+                  >
+                    <Medal className="mb-1" size={20} strokeWidth={3} /> MEDALS
+                  </button>
+                </div>
+                
                 <button 
-                  className="btn btn-outline bg-indigo-900/50 flex items-center justify-center gap-2 text-sm"
-                  onClick={(e) => { e.stopPropagation(); setScreen('aiMenu'); }}
+                  className="bg-[#8b7b4b] hover:bg-[#a1905c] text-white w-full py-4 text-sm rounded-2xl border-b-[6px] border-[#554b2d] active:border-b-0 active:mt-[6px] active:mb-[-6px] flex items-center justify-center font-black tracking-widest transition-all shadow-[0_6px_15px_rgba(0,0,0,0.3)] active:shadow-none mt-2"
+                  onClick={(e) => { e.stopPropagation(); setScreen('settings'); }}
+                  style={{WebkitTextStroke: "1px #3a331c", textShadow: "2px 2px 0 #3a331c"}}
                 >
-                  <HardDrive size={20} /> LAB
+                  <Settings className="mr-2" size={20} strokeWidth={3} /> SETTINGS
                 </button>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <button 
-                  className="btn btn-outline bg-blue-900/50 flex flex-col items-center justify-center p-3 gap-1 text-xs"
-                  onClick={(e) => { e.stopPropagation(); setScreen('stats'); }}
-                >
-                  <BarChart3 size={20} /> STATS
-                </button>
-                <button 
-                  className="btn btn-outline bg-purple-900/50 flex flex-col items-center justify-center p-3 gap-1 text-xs"
-                  onClick={(e) => { e.stopPropagation(); setScreen('achievements'); }}
-                >
-                  <Medal size={20} /> MEDALS
-                </button>
-              </div>
-
-              <button 
-                className="btn btn-outline bg-neutral-900/50 flex items-center justify-center gap-2 text-sm mt-2"
-                onClick={(e) => { e.stopPropagation(); setScreen('settings'); }}
-              >
-                <Settings size={20} /> SETTINGS
-              </button>
             </div>
           </div>
         )}
 
         {screen === 'tutorial' && (
-          <div className="absolute inset-0 bg-black/50 z-20 flex flex-col items-center justify-center p-8 pointer-events-none text-center">
-            <div className="animate-bounce mb-8">
-              <span className="text-white text-6xl">👆</span>
+          <div className="absolute inset-0 bg-black/40 z-20 flex flex-col items-center justify-center p-8 pointer-events-none text-center backdrop-blur-sm">
+            <div className="animate-bounce mb-8 drop-shadow-xl">
+              <span className="text-white text-7xl" style={{ filter: "drop-shadow(0 8px 10px rgba(0,0,0,0.5))" }}>👆</span>
             </div>
-            <p className="text-white text-xl leading-relaxed drop-shadow-md">
+            <p className="text-white text-3xl font-black leading-tight tracking-widest uppercase mb-12" style={{WebkitTextStroke: "2px #1e3a8a", textShadow: "0 4px 0 #1e3a8a, 0 8px 10px rgba(0,0,0,0.6)"}}>
               TAP OR SPACE<br/>TO FLAP
             </p>
           </div>
@@ -232,193 +242,219 @@ export default function App() {
 
         {screen === 'gameover' && (
           <div className="absolute inset-0 overlay-dark flex flex-col items-center justify-center p-6 gap-8 animate-fade-in-scale z-30">
-            <h2 className="text-5xl font-black text-red-500 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" style={{WebkitTextStroke: "2px #7f1d1d"}}>GAME OVER</h2>
+            <h2 className="text-5xl md:text-6xl font-black text-white text-center leading-[1.1] tracking-widest drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]" style={{WebkitTextStroke: "3px #553811", textShadow: "0 6px 0 #553811, 0 8px 10px rgba(0,0,0,0.5)"}}>
+              GAME<br/>OVER
+            </h2>
             
-            <div className="glass-panel p-6 w-full max-w-[280px] flex flex-col items-center gap-6">
-              <div className="flex justify-between items-center w-full uppercase font-bold tracking-wider">
-                <span className="text-white/80">Score</span>
-                <span className="text-3xl font-black text-white">{score}</span>
+            <div className="bg-[#ded895] border-[6px] border-[#553811] rounded-2xl p-6 w-full max-w-[280px] flex flex-col items-center gap-2 relative shadow-[0_12px_0_#553811,0_25px_30px_rgba(0,0,0,0.6)]">
+              <div className="flex flex-col items-center w-full uppercase font-black tracking-widest text-[#d8582d]">
+                <span className="text-lg drop-shadow-sm mb-1 z-10" style={{textShadow: "1px 1px 0 rgba(255,255,255,0.4)"}}>SCORE</span>
+                <span className="text-5xl text-white drop-shadow-md z-20" style={{WebkitTextStroke: "2px #553811", textShadow: "0px 4px 0px #553811"}}>{score}</span>
               </div>
-              <div className="w-full h-px bg-white/20"></div>
-              <div className="flex justify-between items-center w-full uppercase font-bold tracking-wider">
-                <span className="text-yellow-400">Best</span>
-                <span className="text-3xl font-black text-yellow-400">{Math.max(score, highScore)}</span>
+              
+              <div className="w-[80%] h-[4px] bg-[#c3b97b] rounded-full my-3"></div>
+              
+              <div className="flex flex-col items-center w-full uppercase font-black tracking-widest text-[#d8582d]">
+                <span className="text-lg drop-shadow-sm mb-1 z-10" style={{textShadow: "1px 1px 0 rgba(255,255,255,0.4)"}}>BEST</span>
+                <span className="text-4xl text-white drop-shadow-md z-20" style={{WebkitTextStroke: "2px #553811", textShadow: "0px 4px 0px #553811"}}>{Math.max(score, highScore)}</span>
               </div>
             </div>
 
-            <div className="flex gap-4 mt-2 w-full max-w-[280px]">
+            <div className="flex flex-col gap-4 mt-4 w-full max-w-[280px]">
               <button 
-                className="btn btn-primary flex-1 flex items-center justify-center"
+                className="bg-green-500 hover:bg-green-400 text-white w-full py-4 text-xl rounded-2xl border-b-[8px] border-green-700 active:border-b-0 active:mt-[8px] active:mb-[-8px] flex items-center justify-center font-black tracking-widest transition-all shadow-[0_10px_20px_rgba(0,0,0,0.4)] active:shadow-none"
                 onClick={(e) => { e.stopPropagation(); startGame(); }}
+                style={{WebkitTextStroke: "1px #14532d", textShadow: "2px 2px 0 #14532d"}}
               >
-                PLAY AGAIN
+                <Play className="mr-3" size={24} fill="currentColor" strokeWidth={1} stroke="#14532d" /> PLAY AGAIN
               </button>
               <button 
-                className="btn btn-outline p-4 flex items-center justify-center"
+                className="bg-orange-500 hover:bg-orange-400 text-white w-full py-4 text-xl rounded-2xl border-b-[8px] border-orange-700 active:border-b-0 active:mt-[8px] active:mb-[-8px] flex items-center justify-center font-black tracking-widest transition-all shadow-[0_10px_20px_rgba(0,0,0,0.4)] active:shadow-none"
                 onClick={(e) => { e.stopPropagation(); setScreen('menu'); }}
+                style={{WebkitTextStroke: "1px #7c2d12", textShadow: "2px 2px 0 #7c2d12"}}
               >
-                <Settings size={24} />
+                MAIN MENU
               </button>
             </div>
           </div>
         )}
 
         {screen === 'stats' && (
-          <div className="absolute inset-0 bg-neutral-900 z-40 text-white p-6 overflow-y-auto">
-            <div className="flex items-center gap-4 mb-8">
-              <button onClick={(e) => { e.stopPropagation(); setScreen('menu'); }} className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700">
-                <ArrowLeft size={24} />
-              </button>
-              <h2 className="text-2xl text-blue-400">STATS</h2>
-            </div>
-            
-            <div className="flex flex-col gap-4">
-               <div className="bg-neutral-800 p-4 rounded-xl border-2 border-neutral-700 flex justify-between items-center">
-                 <span className="text-xs text-neutral-400">HIGH SCORE</span>
-                 <span className="text-xl text-yellow-400">{highScore}</span>
-               </div>
-               <div className="bg-neutral-800 p-4 rounded-xl border-2 border-neutral-700 flex justify-between items-center">
-                 <span className="text-xs text-neutral-400">GAMES PLAYED</span>
-                 <span className="text-xl text-blue-400">{stats.gamesPlayed}</span>
-               </div>
-               <div className="bg-neutral-800 p-4 rounded-xl border-2 border-neutral-700 flex justify-between items-center">
-                 <span className="text-xs text-neutral-400">TOTAL FLAPS</span>
-                 <span className="text-xl text-green-400">{stats.totalJumps}</span>
-               </div>
-               <div className="bg-neutral-800 p-4 rounded-xl border-2 border-neutral-700 flex justify-between items-center">
-                 <span className="text-xs text-neutral-400">TOTAL PIPES</span>
-                 <span className="text-xl text-white">{stats.totalScore}</span>
-               </div>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-40 p-6 overflow-y-auto flex flex-col items-center">
+            <div className="w-full max-w-[320px] mt-8">
+              <div className="flex items-center justify-center relative mb-8">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setScreen('menu'); }} 
+                  className="absolute left-0 bg-yellow-500 hover:bg-yellow-400 text-white p-3 rounded-xl border-b-[6px] border-yellow-700 active:border-b-0 active:translate-y-[6px] shadow-[0_4px_10px_rgba(0,0,0,0.3)] active:shadow-none transition-all"
+                >
+                  <ArrowLeft size={28} strokeWidth={3} />
+                </button>
+                <h2 className="text-4xl font-black text-white tracking-widest" style={{WebkitTextStroke: "2px #1e3a8a", textShadow: "0 4px 0 #1e3a8a, 0 6px 10px rgba(0,0,0,0.5)"}}>
+                  STATS
+                </h2>
+              </div>
+              
+              <div className="bg-[#ded895] border-[6px] border-[#553811] rounded-2xl p-5 w-full flex flex-col gap-5 relative shadow-[0_12px_0_#553811,0_25px_30px_rgba(0,0,0,0.6)]">
+                 <div className="bg-[#c3b97b] border-[4px] border-[#928641] rounded-xl p-4 flex justify-between items-center shadow-inner">
+                   <span className="text-sm font-black text-[#6a5f25] tracking-widest">HIGH SCORE</span>
+                   <span className="text-2xl font-black text-white" style={{WebkitTextStroke: "1px #3a331c", textShadow: "0 2px 0 #3a331c"}}>{highScore}</span>
+                 </div>
+                 <div className="bg-[#c3b97b] border-[4px] border-[#928641] rounded-xl p-4 flex justify-between items-center shadow-inner">
+                   <span className="text-sm font-black text-[#6a5f25] tracking-widest">GAMES PLAYED</span>
+                   <span className="text-2xl font-black text-white" style={{WebkitTextStroke: "1px #3a331c", textShadow: "0 2px 0 #3a331c"}}>{stats.gamesPlayed}</span>
+                 </div>
+                 <div className="bg-[#c3b97b] border-[4px] border-[#928641] rounded-xl p-4 flex justify-between items-center shadow-inner">
+                   <span className="text-sm font-black text-[#6a5f25] tracking-widest">TOTAL FLAPS</span>
+                   <span className="text-2xl font-black text-white" style={{WebkitTextStroke: "1px #3a331c", textShadow: "0 2px 0 #3a331c"}}>{stats.totalJumps}</span>
+                 </div>
+                 <div className="bg-[#c3b97b] border-[4px] border-[#928641] rounded-xl p-4 flex justify-between items-center shadow-inner">
+                   <span className="text-sm font-black text-[#6a5f25] tracking-widest">TOTAL PIPES</span>
+                   <span className="text-2xl font-black text-white" style={{WebkitTextStroke: "1px #3a331c", textShadow: "0 2px 0 #3a331c"}}>{stats.totalScore}</span>
+                 </div>
+              </div>
             </div>
           </div>
         )}
 
         {screen === 'achievements' && (
-          <div className="absolute inset-0 bg-neutral-900 z-40 text-white p-6 overflow-y-auto">
-            <div className="flex items-center gap-4 mb-8">
-              <button onClick={(e) => { e.stopPropagation(); setScreen('menu'); }} className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700">
-                <ArrowLeft size={24} />
-              </button>
-              <h2 className="text-2xl text-purple-400">MEDALS</h2>
-            </div>
-            
-            <div className="flex flex-col gap-4">
-              {[
-                { id: 'veteran', name: 'Veteran', desc: 'Play 10 games', icon: Trophy, color: 'text-gray-400' },
-                { id: 'bronze', name: 'Bronze', desc: 'Score 10 points', icon: Medal, color: 'text-amber-600' },
-                { id: 'silver', name: 'Silver', desc: 'Score 50 points', icon: Medal, color: 'text-slate-300' },
-                { id: 'gold', name: 'Gold', desc: 'Score 100 points', icon: Medal, color: 'text-yellow-400' },
-              ].map(a => (
-                <div key={a.id} className={`p-4 rounded-xl border-2 flex items-center gap-4 ${achievements.includes(a.id) ? 'bg-neutral-800 border-purple-500/50' : 'bg-neutral-900 border-neutral-800 opacity-50'}`}>
-                  <div className={`p-3 rounded-full bg-neutral-900 ${achievements.includes(a.id) ? a.color : 'text-neutral-600'}`}>
-                    <a.icon size={24} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-40 p-6 overflow-y-auto flex flex-col items-center">
+            <div className="w-full max-w-[320px] mt-8">
+              <div className="flex items-center justify-center relative mb-8">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setScreen('menu'); }} 
+                  className="absolute left-0 bg-yellow-500 hover:bg-yellow-400 text-white p-3 rounded-xl border-b-[6px] border-yellow-700 active:border-b-0 active:translate-y-[6px] shadow-[0_4px_10px_rgba(0,0,0,0.3)] active:shadow-none transition-all"
+                >
+                  <ArrowLeft size={28} strokeWidth={3} />
+                </button>
+                <h2 className="text-4xl font-black text-white tracking-widest" style={{WebkitTextStroke: "2px #6b21a8", textShadow: "0 4px 0 #6b21a8, 0 6px 10px rgba(0,0,0,0.5)"}}>
+                  MEDALS
+                </h2>
+              </div>
+              
+              <div className="flex flex-col gap-4">
+                {[
+                  { id: 'veteran', name: 'Veteran', desc: 'Play 10 games', icon: Trophy, color: 'text-slate-200 shadow-[0_0_15px_rgba(226,232,240,0.8)]' },
+                  { id: 'bronze', name: 'Bronze', desc: 'Score 10 points', icon: Medal, color: 'text-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.8)]' },
+                  { id: 'silver', name: 'Silver', desc: 'Score 50 points', icon: Medal, color: 'text-slate-300 shadow-[0_0_15px_rgba(203,213,225,0.8)]' },
+                  { id: 'gold', name: 'Gold', desc: 'Score 100 points', icon: Medal, color: 'text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)]' },
+                ].map(a => (
+                  <div key={a.id} className={`p-4 rounded-2xl border-[4px] flex items-center gap-4 relative overflow-hidden transition-all ${achievements.includes(a.id) ? 'bg-[#fef08a] border-[#eab308] shadow-[0_6px_0_#ca8a04,0_10px_15px_rgba(0,0,0,0.4)]' : 'bg-[#ded895] border-[#928641] opacity-60 shadow-[0_6px_0_#928641]'} mt-2`}>
+                    <div className={`p-3 rounded-full bg-[#553811] ${achievements.includes(a.id) ? a.color : 'text-[#a1905c]'}`}>
+                      <a.icon size={28} strokeWidth={2.5} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xl font-black text-[#6a5f25]" style={{WebkitTextStroke: "1px #fae8ff"}}>{a.name}</span>
+                      <span className="text-xs font-bold text-[#8b7b4b] uppercase tracking-widest">{a.desc}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold">{a.name}</span>
-                    <span className="text-[10px] text-neutral-400">{a.desc}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {screen === 'settings' && (
-          <div className="absolute inset-0 bg-neutral-900 z-40 text-white p-6 overflow-y-auto">
-            <div className="flex items-center gap-4 mb-8">
-              <button onClick={(e) => { e.stopPropagation(); setScreen('menu'); }} className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700">
-                <ArrowLeft size={24} />
-              </button>
-              <h2 className="text-2xl text-yellow-400">SETTINGS</h2>
-            </div>
-            
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-3">
-                <h3 className="text-xs text-neutral-400 font-bold tracking-widest">THEME</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.values(THEMES).map(t => (
-                    <button
-                      key={t.id}
-                      onClick={(e) => { e.stopPropagation(); setTheme(t.id as keyof typeof THEMES); }}
-                      className={`p-3 rounded-xl border-4 text-xs font-bold flex flex-col items-center gap-2 transition-all ${themeId === t.id ? 'border-green-500 bg-neutral-800 scale-105 shadow-lg' : 'border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800 hover:scale-100'}`}
-                    >
-                      <div className="w-full h-12 rounded-lg border-2 border-black relative overflow-hidden" style={{ backgroundColor: t.bg }}>
-                         <div className="absolute bottom-0 w-8 h-8 border-t-2 border-r-2 border-black" style={{ backgroundColor: t.pipeTop, borderColor: t.pipeBorder }}></div>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-40 p-6 overflow-y-auto flex flex-col items-center">
+            <div className="w-full max-w-[320px] mt-8">
+              <div className="flex items-center justify-center relative mb-8">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setScreen('menu'); }} 
+                  className="absolute left-0 bg-yellow-500 hover:bg-yellow-400 text-white p-3 rounded-xl border-b-[6px] border-yellow-700 active:border-b-0 active:translate-y-[6px] shadow-[0_4px_10px_rgba(0,0,0,0.3)] active:shadow-none transition-all"
+                >
+                  <ArrowLeft size={28} strokeWidth={3} />
+                </button>
+                <h2 className="text-4xl font-black text-white tracking-widest" style={{WebkitTextStroke: "2px #b45309", textShadow: "0 4px 0 #b45309, 0 6px 10px rgba(0,0,0,0.5)"}}>
+                  SETTINGS
+                </h2>
+              </div>
+              
+              <div className="flex flex-col gap-6 w-full">
+                <div className="bg-[#ded895] border-[6px] border-[#553811] rounded-2xl p-5 flex flex-col gap-5 relative shadow-[0_12px_0_#553811,0_25px_30px_rgba(0,0,0,0.6)]">
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-sm font-black text-[#6a5f25] tracking-widest" style={{WebkitTextStroke: "1px #fae8ff"}}>THEME</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.values(THEMES).map(t => (
+                        <button
+                          key={t.id}
+                          onClick={(e) => { e.stopPropagation(); setTheme(t.id as keyof typeof THEMES); }}
+                          className={`p-3 rounded-xl border-[4px] text-xs font-black flex flex-col items-center gap-2 transition-all ${themeId === t.id ? 'border-[#14532d] bg-[#fef08a] shadow-[0_4px_0_#14532d] text-[#14532d]' : 'border-[#928641] bg-[#c3b97b] text-[#6a5f25] hover:bg-[#d4cd9e]'}`}
+                        >
+                          <div className="w-full h-12 rounded-lg border-[3px] border-[#553811] relative overflow-hidden" style={{ backgroundColor: t.bg }}>
+                             <div className="absolute bottom-0 w-8 h-8 border-t-[3px] border-r-[3px] border-[#553811]" style={{ backgroundColor: t.pipeTop, borderColor: t.pipeBorder }}></div>
+                          </div>
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-sm font-black text-[#6a5f25] tracking-widest" style={{WebkitTextStroke: "1px #fae8ff"}}>AUDIO</h3>
+                    <div className="bg-[#c3b97b] p-4 rounded-xl flex flex-col gap-4 border-[4px] border-[#928641] shadow-inner">
+                      <div className="flex items-center gap-4">
+                        <Volume2 size={28} strokeWidth={3} className="text-[#553811] shrink-0" />
+                        <div className="w-full flex flex-col gap-2">
+                           <span className="text-xs font-bold text-[#6a5f25] tracking-widest">SFX: {sfxVolume}%</span>
+                           <input type="range" min="0" max="100" value={sfxVolume} onChange={(e) => setSfxVolume(parseInt(e.target.value))} onPointerDown={(e) => e.stopPropagation()} className="w-full retro-slider" />
+                        </div>
                       </div>
-                      {t.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                    </div>
+                  </div>
 
-              <div className="flex flex-col gap-3">
-                <h3 className="text-xs text-neutral-400 font-bold tracking-widest">AUDIO</h3>
-                <div className="bg-neutral-800 p-4 rounded-xl flex flex-col gap-4 border-2 border-neutral-700 shadow-md">
-                  <div className="flex items-center gap-4">
-                    <Volume2 size={24} className="text-neutral-400 shrink-0" />
-                    <div className="w-full flex flex-col gap-2">
-                       <span className="text-[10px] tracking-widest">SFX: {sfxVolume}%</span>
-                       <input type="range" min="0" max="100" value={sfxVolume} onChange={(e) => setSfxVolume(parseInt(e.target.value))} onPointerDown={(e) => e.stopPropagation()} className="w-full accent-green-500" />
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-sm font-black text-[#6a5f25] tracking-widest" style={{WebkitTextStroke: "1px #fae8ff"}}>VISUAL EFFECTS</h3>
+                    <div className="bg-[#c3b97b] p-4 rounded-xl flex flex-col gap-4 border-[4px] border-[#928641] shadow-inner">
+                      <label className="flex items-center justify-between cursor-pointer w-full">
+                        <div className="flex items-center gap-3">
+                          <Zap size={24} strokeWidth={3} className={enableShake ? "text-yellow-500" : "text-[#8b7b4b]"} />
+                          <span className="text-xs font-black text-[#553811] tracking-wide">SHAKE & FLASH</span>
+                        </div>
+                        <input 
+                          type="checkbox" 
+                          checked={enableShake} 
+                          onChange={(e) => setEnableShake(e.target.checked)} 
+                          className="w-6 h-6 accent-yellow-500 cursor-pointer"
+                        />
+                      </label>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-3">
-                <h3 className="text-xs text-neutral-400 font-bold tracking-widest">VISUAL EFFECTS (JUICE)</h3>
-                <div className="bg-neutral-800 p-4 rounded-xl flex flex-col gap-4 border-2 border-neutral-700 shadow-md">
-                  <label className="flex items-center justify-between cursor-pointer w-full">
-                    <div className="flex items-center gap-3">
-                      <Zap size={20} className={enableShake ? "text-yellow-400" : "text-neutral-500"} />
-                      <span className="text-xs font-bold tracking-wide">Screen Shake & Hit Stop</span>
+                <div className="flex flex-col gap-4">
+                  {resetConfirm ? (
+                    <div className="flex gap-2 w-full animate-fade-in-scale">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          resetProgress();
+                          setResetConfirm(false);
+                        }}
+                        className="flex-1 p-4 bg-red-500 hover:bg-red-400 text-white rounded-xl border-b-[6px] border-red-700 active:border-b-0 active:translate-y-[6px] text-xs font-black tracking-wider shadow-[0_4px_10px_rgba(0,0,0,0.3)] active:shadow-none transition-all"
+                      >
+                        CONFIRM
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setResetConfirm(false);
+                        }}
+                        className="flex-1 p-4 bg-[#8b7b4b] hover:bg-[#a1905c] text-white rounded-xl border-b-[6px] border-[#554b2d] active:border-b-0 active:translate-y-[6px] text-xs font-black tracking-wider shadow-[0_4px_10px_rgba(0,0,0,0.3)] active:shadow-none transition-all"
+                      >
+                        CANCEL
+                      </button>
                     </div>
-                    <input 
-                      type="checkbox" 
-                      checked={enableShake} 
-                      onChange={(e) => setEnableShake(e.target.checked)} 
-                      className="w-5 h-5 accent-yellow-400 cursor-pointer"
-                    />
-                  </label>
-                  <p className="text-[9px] text-neutral-400 leading-relaxed uppercase">
-                    Turn off if you are sensitive to flashing lights or rapid screen movements.
-                  </p>
+                  ) : (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setResetConfirm(true);
+                      }}
+                      className="flex items-center justify-center gap-2 w-full p-4 bg-red-500 hover:bg-red-400 text-white rounded-xl border-b-[6px] border-red-700 active:border-b-0 active:translate-y-[6px] text-sm tracking-wider font-black shadow-[0_4px_10px_rgba(0,0,0,0.3)] active:shadow-none transition-all"
+                    >
+                      <Trash2 size={20} strokeWidth={3} /> CLEAR DATA
+                    </button>
+                  )}
                 </div>
-              </div>
-
-              <div className="flex flex-col gap-4 mt-4">
-                {resetConfirm ? (
-                  <div className="flex gap-2 w-full animate-fade-in-scale">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        resetProgress();
-                        setResetConfirm(false);
-                      }}
-                      className="flex-1 p-4 border border-red-500 bg-red-950/30 text-red-500 rounded-xl hover:bg-red-900/50 text-xs font-bold tracking-wider"
-                    >
-                      CONFIRM RESET
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setResetConfirm(false);
-                      }}
-                      className="flex-1 p-4 border border-neutral-700 bg-neutral-800 text-white rounded-xl hover:bg-neutral-700 text-xs font-bold tracking-wider"
-                    >
-                      CANCEL
-                    </button>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setResetConfirm(true);
-                    }}
-                    className="flex items-center justify-center gap-2 w-full p-4 border-2 border-red-900/50 text-red-500 rounded-xl hover:bg-red-950/30 text-xs tracking-wider font-bold transition-colors"
-                  >
-                    <Trash2 size={16} /> CLEAR SAVE DATA
-                  </button>
-                )}
               </div>
             </div>
           </div>

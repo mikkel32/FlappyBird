@@ -236,36 +236,46 @@ export function AiMenu() {
   };
 
   return (
-    <div className="absolute inset-0 z-50 overlay-dark text-white flex flex-col items-center justify-start p-6 overflow-y-auto w-full h-full animate-fade-in-scale">
+    <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-start p-6 overflow-y-auto w-full h-full animate-fade-in-scale">
       {toast && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-full font-bold shadow-lg transition-all animate-fade-in-scale ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-full font-black tracking-widest shadow-lg transition-all animate-fade-in-scale ${toast.type === 'error' ? 'bg-red-500 border-b-[4px] border-red-700 text-white' : 'bg-green-500 border-b-[4px] border-green-700 text-white'}`}>
           {toast.msg}
         </div>
       )}
-      <div className="w-full max-w-md flex flex-col gap-6 glass-panel p-6">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-3xl font-black text-cyan-400 drop-shadow-md">AI Laboratory</h2>
-          <button className="text-white bg-transparent border-none cursor-pointer" onClick={() => setScreen('menu')}>
-            <span className="text-2xl">&times;</span>
+      <div className="w-full max-w-[320px] flex flex-col gap-6 mt-2">
+        <div className="flex justify-center items-center relative mb-4">
+          <button 
+            className="absolute left-0 bg-yellow-500 hover:bg-yellow-400 text-white p-2 rounded-xl border-b-[6px] border-yellow-700 active:border-b-0 active:translate-y-[6px] shadow-[0_4px_10px_rgba(0,0,0,0.3)] active:shadow-none transition-all" 
+            onClick={() => setScreen('menu')}
+          >
+            <ArrowLeft size={24} strokeWidth={3} />
           </button>
+          <h2 className="text-3xl font-black text-white tracking-widest drop-shadow-md" style={{WebkitTextStroke: "1px #0891b2", textShadow: "0 4px 0 #0891b2, 0 6px 10px rgba(0,0,0,0.5)"}}>
+            AI LAB
+          </h2>
         </div>
 
-        {!user ? (
-          <div className="flex flex-col gap-4 text-center mt-4">
-            <p className="text-white/70">Sign in to train and save genetic models in the cloud.</p>
-            <button onClick={login} className="btn btn-secondary flex items-center justify-center gap-2 mt-2">
-              <LogIn size={20} /> Sign in with Google
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center bg-neutral-800 p-4 rounded-xl">
-              <div className="text-sm">
-                <p className="text-neutral-400">Logged in as:</p>
-                <p className="font-bold">{user.displayName || user.email}</p>
-              </div>
-              <button onClick={() => signOut(auth)} className="text-xs text-red-400 hover:underline">Sign out</button>
+        <div className="bg-[#ded895] border-[6px] border-[#553811] rounded-2xl p-5 flex flex-col gap-4 relative shadow-[0_12px_0_#553811,0_25px_30px_rgba(0,0,0,0.6)] w-full">
+          {!user ? (
+            <div className="flex flex-col gap-4 text-center mt-2">
+              <p className="text-[#553811] font-bold text-sm">Sign in to train and save genetic models in the cloud.</p>
+              <button 
+                onClick={login} 
+                className="bg-blue-500 hover:bg-blue-400 text-white w-full py-4 text-lg rounded-2xl border-b-[6px] border-blue-700 active:border-b-0 active:translate-y-[6px] flex items-center justify-center font-black tracking-widest transition-all shadow-[0_6px_15px_rgba(0,0,0,0.3)] active:shadow-none"
+                style={{WebkitTextStroke: "1px #1e3a8a", textShadow: "2px 2px 0 #1e3a8a"}}
+              >
+                <LogIn size={24} strokeWidth={2.5} className="mr-2" /> SIGN IN
+              </button>
             </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-center bg-[#c3b97b] border-[4px] border-[#928641] p-3 rounded-xl shadow-inner">
+                <div className="text-xs">
+                  <p className="text-[#8b7b4b] font-black tracking-widest leading-none mb-1">LOGGED IN AS</p>
+                  <p className="font-bold text-[#553811]">{user.displayName || user.email}</p>
+                </div>
+                <button onClick={() => signOut(auth)} className="text-[10px] font-black tracking-widest uppercase bg-red-500 text-white px-2 py-1 rounded border-b-[2px] border-red-700 active:border-b-0 active:translate-y-[2px]">OUT</button>
+              </div>
 
             {training ? (
               <div className="flex flex-col gap-6 relative mt-4">
@@ -352,65 +362,70 @@ export function AiMenu() {
                   </div>
                 </div>
 
-                <button onClick={() => startTraining()} className="btn btn-secondary flex items-center justify-center gap-2">
-                  <Play size={20} /> START TRAINING
+                <button 
+                  onClick={() => startTraining()} 
+                  className="bg-green-500 hover:bg-green-400 text-white w-full py-4 text-lg rounded-2xl border-b-[6px] border-green-700 active:border-b-0 active:translate-y-[6px] flex items-center justify-center font-black tracking-widest transition-all shadow-[0_6px_15px_rgba(0,0,0,0.3)] active:shadow-none mt-2"
+                  style={{WebkitTextStroke: "1px #14532d", textShadow: "2px 2px 0 #14532d"}}
+                >
+                  <Play size={24} strokeWidth={2.5} className="mr-2" /> START TRAINING
                 </button>
               </div>
             )}
 
-             <h3 className="text-xl font-bold mt-4 border-b border-neutral-700 pb-2">Saved Models</h3>
-             <div className="flex flex-col gap-2">
-               {bots.length === 0 && <p className="text-neutral-500 text-sm">No saved bots yet.</p>}
-               {bots.map(b => (
-                 <div key={b.id} className="bg-neutral-800 p-4 rounded-xl flex justify-between items-center border border-neutral-700/50 hover:border-cyan-800/50 transition-colors group">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-cyan-400 text-lg">Score: {b.score}</span>
-                      <span className="text-xs text-neutral-400">Generation {b.generation}</span>
-                      {b.createdAt && <span className="text-[10px] text-neutral-500 mt-1">{new Date(b.createdAt.seconds ? b.createdAt.seconds * 1000 : b.createdAt).toLocaleString()}</span>}
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      {botToDelete === b.id ? (
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => deleteBot(b.id)}
-                            className="bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors"
-                          >
-                            Confirm Delete
-                          </button>
-                          <button 
-                            onClick={() => setBotToDelete(null)}
-                            className="bg-neutral-600 hover:bg-neutral-500 text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <button 
-                            onClick={() => {
-                              useGameStore.getState().setLoadedBrain(b.weights);
-                              useGameStore.getState().setAutoPlay(true);
-                              useGameStore.getState().setScreen('playing');
-                            }}
-                            className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-bold transition-transform active:scale-95 flex items-center gap-1 shadow-md"
-                          >
-                            <Play size={14} /> WATCH
-                          </button>
-                          <button 
-                            onClick={() => setBotToDelete(b.id)}
-                            className="bg-neutral-700 hover:bg-red-500 hover:text-white text-neutral-300 px-3 py-2 rounded-lg transition-colors flex items-center justify-center opacity-70 group-hover:opacity-100"
-                            title="Delete this model"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                 </div>
-               ))}
-             </div>
-          </div>
-        )}
+              <h3 className="text-xl font-black mt-4 pb-2 border-b-[4px] border-[#c3b97b] text-[#553811] tracking-widest">SAVED MODELS</h3>
+              <div className="flex flex-col gap-2">
+                {bots.length === 0 && <p className="text-[#8b7b4b] text-xs font-bold uppercase">No saved bots yet.</p>}
+                {bots.map(b => (
+                  <div key={b.id} className="bg-[#c3b97b] p-4 rounded-xl flex justify-between items-center border-[4px] border-[#928641] transition-colors group">
+                     <div className="flex flex-col">
+                       <span className="font-black text-[#14532d] text-lg">Score: {b.score}</span>
+                       <span className="text-[10px] font-bold text-[#6a5f25] tracking-widest uppercase mb-1">Generation {b.generation}</span>
+                       {b.createdAt && <span className="text-[10px] text-[#8b7b4b] font-bold">{new Date(b.createdAt.seconds ? b.createdAt.seconds * 1000 : b.createdAt).toLocaleString()}</span>}
+                     </div>
+                     <div className="flex flex-col sm:flex-row gap-2">
+                       {botToDelete === b.id ? (
+                         <div className="flex items-center gap-2">
+                           <button 
+                             onClick={() => deleteBot(b.id)}
+                             className="bg-red-500 hover:bg-red-400 text-white px-3 py-2 rounded-lg text-xs font-black tracking-widest border-b-[4px] border-red-700 active:border-b-0 active:translate-y-[4px] transition-all"
+                           >
+                             DELETE
+                           </button>
+                           <button 
+                             onClick={() => setBotToDelete(null)}
+                             className="bg-[#8b7b4b] hover:bg-[#a1905c] text-white px-3 py-2 rounded-lg text-xs font-black tracking-widest border-b-[4px] border-[#554b2d] active:border-b-0 active:translate-y-[4px] transition-all"
+                           >
+                             CANCEL
+                           </button>
+                         </div>
+                       ) : (
+                         <>
+                           <button 
+                             onClick={() => {
+                               useGameStore.getState().setLoadedBrain(b.weights);
+                               useGameStore.getState().setAutoPlay(true);
+                               useGameStore.getState().setScreen('playing');
+                             }}
+                             className="bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded-lg text-xs font-black tracking-widest border-b-[4px] border-blue-700 active:border-b-0 active:translate-y-[4px] transition-all flex items-center gap-1 shadow-md"
+                           >
+                             <Play size={16} strokeWidth={3} /> WATCH
+                           </button>
+                           <button 
+                             onClick={() => setBotToDelete(b.id)}
+                             className="bg-red-500 hover:bg-red-400 text-white px-3 py-2 rounded-lg text-xs font-black tracking-widest border-b-[4px] border-red-700 active:border-b-0 active:translate-y-[4px] transition-all flex items-center justify-center opacity-70 group-hover:opacity-100"
+                             title="Delete this model"
+                           >
+                             <Trash2 size={16} strokeWidth={3} />
+                           </button>
+                         </>
+                       )}
+                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

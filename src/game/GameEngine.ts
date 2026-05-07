@@ -49,20 +49,49 @@ export class PerfectMechanicalBot {
 }
 
 export class Particle {
-  x: number; y: number; vx: number; vy: number; life: number; color: string; size: number;
-  constructor(x: number, y: number, color: string) {
+  x: number; y: number; vx: number; vy: number; life: number; color: string; size: number; type: 'smoke' | 'splat' | 'spark' | 'ring';
+  rotation: number; rotSpeed: number; maxLife: number;
+
+  constructor(x: number, y: number, color: string, type: 'smoke' | 'splat' | 'spark' | 'ring' = 'splat') {
     this.x = x; this.y = y;
-    // Explode powerfully outwards and slightly upwards
-    this.vx = (Math.random() - 0.5) * 12;
-    this.vy = (Math.random() - 0.5) * 12 - 4; 
-    this.life = 1.0;
     this.color = color;
-    this.size = Math.random() * 5 + 3; // Random sizes
+    this.type = type;
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 0.4;
+
+    if (type === 'smoke') {
+      this.vx = -1 - Math.random() * 2; // Drift backwards
+      this.vy = (Math.random() - 0.5) * 1;
+      this.maxLife = 0.5 + Math.random() * 0.5;
+      this.size = Math.random() * 4 + 4;
+    } else if (type === 'spark') {
+      this.vx = (Math.random() - 0.5) * 16;
+      this.vy = (Math.random() - 0.5) * 16;
+      this.maxLife = 0.6 + Math.random() * 0.4;
+      this.size = Math.random() * 3 + 2;
+    } else if (type === 'ring') {
+      this.vx = 0;
+      this.vy = 0;
+      this.maxLife = 0.8;
+      this.size = 1;
+    } else {
+      // Explode powerfully outwards and slightly upwards for splat
+      this.vx = (Math.random() - 0.5) * 10;
+      this.vy = (Math.random() - 0.5) * 10 - 2; 
+      this.maxLife = 0.8 + Math.random() * 0.4;
+      this.size = Math.random() * 5 + 3;
+    }
+    this.life = this.maxLife;
   }
   update() {
-    this.vy += 0.4; // Particles have gravity!
+    if (this.type === 'splat') this.vy += 0.4; // Heavy gravity
+    if (this.type === 'spark') { this.vy += 0.1; this.vx *= 0.92; this.vy *= 0.92; } // Light gravity with drag
+    if (this.type === 'smoke') { this.size += 0.2; this.vy *= 0.95; this.vx *= 0.95; } // Expanding/slowing smoke
+    if (this.type === 'ring') { this.size += 6; } // Fast expanding ring
+    
     this.x += this.vx; this.y += this.vy; 
-    this.life -= 0.025; // Fade out gradually
+    this.rotation += this.rotSpeed;
+    this.life -= 0.025;
   }
 }
 
@@ -85,15 +114,20 @@ export class GameEngine {
   private gravity = 0.5;
   private terminalVelocity = 14;
   private jumpStrength = -8.5;
-  private basePipeSpeed = 2.0;
+  private basePipeSpeed = 1.7;
   private basePipeGap = 160;
 
   // Dynamic game state
   private birdY = 0;
   private birdVelocity = 0;
   private birdRotation = 0;
+  private birdScaleX = 1;
+  private birdScaleY = 1;
+  private birdScaleVelX = 0;
+  private birdScaleVelY = 0;
   private pipes: Array<{ x: number, gapY: number }> = [];
   private particles: Particle[] = [];
+  private trail: Array<{ x: number, y: number, rotation: number, opacity: number, scaleX: number, scaleY: number }> = [];
   private score = 0;
   private currentJumps = 0;
   private frames = 0;
@@ -161,8 +195,13 @@ export class GameEngine {
     this.birdY = this.height / 2;
     this.birdVelocity = 0;
     this.birdRotation = 0;
+    this.birdScaleX = 1;
+    this.birdScaleY = 1;
+    this.birdScaleVelX = 0;
+    this.birdScaleVelY = 0;
     this.pipes = [];
     this.score = 0;
+    this.trail = [];
     this.groundOffset = 0;
     this.isDead = false;
     this.paused = false;
@@ -175,8 +214,13 @@ export class GameEngine {
     this.birdY = this.height / 2;
     this.birdVelocity = 0;
     this.birdRotation = 0;
+    this.birdScaleX = 1;
+    this.birdScaleY = 1;
+    this.birdScaleVelX = 0;
+    this.birdScaleVelY = 0;
     this.pipes = [];
     this.particles = [];
+    this.trail = [];
     this.score = 0;
     this.currentJumps = 0;
     this.frames = 0;
@@ -212,15 +256,22 @@ export class GameEngine {
     if (this.paused || this.isDead || this.state !== 'playing' || this.flapCooldown > 0) return;
     this.birdVelocity = this.jumpStrength;
     this.birdRotation = -Math.PI / 4; 
+    
+    // Squash on flap
+    this.birdScaleX = 1.25;
+    this.birdScaleY = 0.85;
+    this.birdScaleVelX = 0;
+    this.birdScaleVelY = 0;
+
     this.currentJumps++;
     this.flapCooldown = 6;
-    this.spawnParticles(40, this.birdY, '#ffffff', 5);
+    this.spawnParticles(40 - 10, this.birdY + 5, 'rgba(255, 255, 255, 0.8)', 6, 'smoke');
     audioContext.playFlap();
   }
 
-  private spawnParticles(x: number, y: number, color: string, count: number) {
+  private spawnParticles(x: number, y: number, color: string, count: number, type: 'smoke' | 'splat' | 'spark' = 'splat') {
     for (let i = 0; i < count; i++) {
-       this.particles.push(new Particle(x, y, color));
+       this.particles.push(new Particle(x, y, color, type));
     }
   }
 
@@ -296,8 +347,8 @@ export class GameEngine {
     }
 
     // Difficulty scaling
-    const speedDifficultyRatio = Math.min(this.score / 40, 1); 
-    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 1.25); 
+    const speedDifficultyRatio = Math.min(this.score / 50, 1); 
+    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 0.6); 
     const splitRatio = Math.min(this.score / 50, 1);
     const currentPipeGap = Math.max(120, this.basePipeGap - (splitRatio * 30));
 
@@ -327,6 +378,29 @@ export class GameEngine {
     if (this.birdVelocity > this.terminalVelocity) {
        this.birdVelocity = this.terminalVelocity;
     }
+
+    // Dynamic Squash & Stretch tied to velocity
+    let targetScaleX = 1;
+    let targetScaleY = 1;
+
+    // Stretch when falling rapidly
+    if (this.birdVelocity > 4) {
+      const stretch = Math.min((this.birdVelocity - 4) / 10, 1);
+      targetScaleY = 1 + stretch * 0.2; // Up to 1.2
+      targetScaleX = 1 - stretch * 0.15; // Down to 0.85
+    }
+
+    // Spring-like physics for scale recovery
+    this.birdScaleVelX += (targetScaleX - this.birdScaleX) * 0.25;
+    this.birdScaleVelY += (targetScaleY - this.birdScaleY) * 0.25;
+    
+    // Spring damping
+    this.birdScaleVelX *= 0.75;
+    this.birdScaleVelY *= 0.75;
+
+    this.birdScaleX += this.birdScaleVelX;
+    this.birdScaleY += this.birdScaleVelY;
+
     this.birdY += this.birdVelocity;
 
     for (let i = this.particles.length - 1; i >= 0; i--) {
@@ -347,6 +421,21 @@ export class GameEngine {
        this.birdRotation += 0.06;
        if (this.birdRotation > Math.PI / 2) this.birdRotation = Math.PI / 2;
     }
+
+    // Update Trail
+    if (this.state === 'playing' && !this.isDead) {
+      // Always add point to trail for maximum smoothness
+      this.trail.unshift({ x: 40, y: this.birdY, rotation: this.birdRotation, opacity: 1.0, scaleX: this.birdScaleX, scaleY: this.birdScaleY });
+      if (this.trail.length > 50) this.trail.pop();
+    }
+    
+    // Process trail fade and movement
+    for (let t of this.trail) {
+       t.opacity -= 0.012;
+       t.x -= currentPipeSpeed;
+    }
+    // Clean up empty trails
+    this.trail = this.trail.filter(t => t.opacity > 0);
 
     // Floor / Ceiling collision
     if (this.birdY + 12 >= floorY || this.birdY - 12 <= 0) {
@@ -643,18 +732,86 @@ export class GameEngine {
     // Draw Particles
     for (const pt of this.particles) {
       this.ctx.fillStyle = pt.color;
-      this.ctx.globalAlpha = Math.max(0, pt.life);
-      this.ctx.beginPath();
-      // Particles shrink as they die
-      this.ctx.arc(pt.x, pt.y, pt.size * pt.life, 0, Math.PI * 2);
-      this.ctx.fill();
+      this.ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+      
+      this.ctx.save();
+      this.ctx.translate(pt.x, pt.y);
+      this.ctx.rotate(pt.rotation);
+      if (pt.type === 'spark') {
+         this.ctx.fillRect(-pt.size*1.5, -pt.size/2, pt.size*3, pt.size);
+      } else if (pt.type === 'ring') {
+         this.ctx.beginPath();
+         this.ctx.arc(0, 0, pt.size, 0, Math.PI * 2);
+         this.ctx.strokeStyle = pt.color;
+         this.ctx.lineWidth = 6 * Math.max(0, pt.life / pt.maxLife);
+         this.ctx.stroke();
+      } else {
+         this.ctx.beginPath();
+         this.ctx.arc(0, 0, pt.type === 'smoke' ? pt.size : pt.size * (pt.life / pt.maxLife), 0, Math.PI * 2);
+         this.ctx.fill();
+      }
+      this.ctx.restore();
     }
     this.ctx.globalAlpha = 1.0;
+
+    // Draw Bird Trail
+    if (this.trail.length > 0) {
+       this.ctx.globalCompositeOperation = 'screen';
+       for (let i = 0; i < this.trail.length; i++) {
+          // Draw every 2nd frame to create a continuous but performant cohesive blur
+          if (i % 2 !== 0) continue;
+          
+          const t = this.trail[i];
+          if (t.opacity <= 0) continue;
+
+          this.ctx.save();
+          this.ctx.translate(t.x, t.y);
+          this.ctx.rotate(t.rotation);
+
+          // Sharpen the tail tapering so it becomes a thin point, avoiding a blunt shape
+          const progress = i / this.trail.length;
+          const scaleFactor = Math.pow(1 - progress, 2.5);
+          
+          this.ctx.scale(t.scaleX * scaleFactor, t.scaleY * scaleFactor);
+
+          // Draw the full bird geometry for the ghost
+          
+          // Ethereal tail
+          this.ctx.globalAlpha = Math.max(0, t.opacity * 0.2 * (1 - progress));
+          this.ctx.fillStyle = this.theme.birdWing;
+          this.ctx.beginPath();
+          this.ctx.moveTo(-12, 0);
+          this.ctx.lineTo(-20, -4);
+          this.ctx.lineTo(-18, 2);
+          this.ctx.lineTo(-22, 6);
+          this.ctx.lineTo(-12, 8);
+          this.ctx.fill();
+
+          // Ethereal body
+          this.ctx.globalAlpha = Math.max(0, t.opacity * 0.25 * (1 - progress));
+          this.ctx.fillStyle = this.theme.birdBody;
+          this.ctx.beginPath();
+          // Slightly stretch it horizontally for a motion-blur illusion
+          this.ctx.ellipse(0, 0, 15, 12, 0, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          // Bright inner core
+          this.ctx.lineWidth = 2;
+          this.ctx.strokeStyle = '#ffffff';
+          this.ctx.globalAlpha = Math.max(0, t.opacity * 0.4 * (1 - progress));
+          this.ctx.stroke();
+
+          this.ctx.restore();
+       }
+       this.ctx.globalCompositeOperation = 'source-over';
+       this.ctx.globalAlpha = 1.0;
+    }
 
     // Bird
     this.ctx.save();
     this.ctx.translate(40, this.birdY);
     this.ctx.rotate(this.birdRotation);
+    this.ctx.scale(this.birdScaleX, this.birdScaleY);
 
     // Tail
     this.ctx.fillStyle = this.theme.birdWing;
@@ -788,8 +945,16 @@ export class GameEngine {
     
     // EXPLOSIVE PARTICLE SPLATTER
     const splatColors = ['#ff4444', '#ff8800', '#ffbb00', '#ffffff', this.theme.birdBody];
-    for(let i=0; i<30; i++) {
-       this.spawnParticles(40, this.birdY, splatColors[Math.floor(Math.random()*splatColors.length)], 1);
+    this.spawnParticles(40, this.birdY, this.theme.birdBody, 1, 'ring');
+    setTimeout(() => {
+       if (this.state === 'gameover') this.spawnParticles(40, this.birdY, '#ffffff', 1, 'ring');
+    }, 100);
+    
+    for(let i=0; i<12; i++) {
+       this.spawnParticles(40, this.birdY, splatColors[Math.floor(Math.random()*splatColors.length)], 1, 'splat');
+    }
+    for(let i=0; i<10; i++) {
+       this.spawnParticles(40, this.birdY, '#ffffff', 1, 'spark');
     }
     audioContext.playCrash();
   }

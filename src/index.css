@@ -36,20 +36,20 @@
   
   .btn-primary {
     @apply bg-yellow-400 text-yellow-900;
-    box-shadow: 0 6px 0 #ca8a04;
+    box-shadow: 0 6px 0 #ca8a04, 0 8px 15px rgba(0,0,0,0.3);
   }
   .btn-primary:active {
     transform: translateY(6px);
-    box-shadow: 0 0 0 #ca8a04;
+    box-shadow: 0 0 0 #ca8a04, 0 0 0 rgba(0,0,0,0);
   }
 
   .btn-secondary {
     @apply bg-blue-500 text-white;
-    box-shadow: 0 6px 0 #2563eb;
+    box-shadow: 0 6px 0 #2563eb, 0 8px 15px rgba(0,0,0,0.3);
   }
   .btn-secondary:active {
     transform: translateY(6px);
-    box-shadow: 0 0 0 #2563eb;
+    box-shadow: 0 0 0 #2563eb, 0 0 0 rgba(0,0,0,0);
   }
 
   .btn-outline {
@@ -67,4 +67,45 @@
 
 .animate-fade-in-scale {
   animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes scoreBump {
+  0% { transform: scale(1.5); color: #facc15; }
+  100% { transform: scale(1); color: white; }
+}
+
+.animate-score-bump {
+  animation: scoreBump 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Custom Range Sliders */
+input[type=range].retro-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  background: transparent;
+}
+
+input[type=range].retro-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 20px;
+  width: 12px;
+  border-radius: 4px;
+  background: #facc15;
+  cursor: pointer;
+  margin-top: -6px;
+  border: 2px solid #ca8a04;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+input[type=range].retro-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  cursor: pointer;
+  background: #334155;
+  border-radius: 4px;
+  border: 2px solid #0f172a;
+}
+
+input[type=range].retro-slider:focus {
+  outline: none;
 }
