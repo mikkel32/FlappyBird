@@ -155,7 +155,7 @@ export default function App() {
             {autoPlay && (
               <div className="text-center w-full mt-4">
                 <span className="bg-cyan-600/80 text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider backdrop-blur-sm border border-cyan-400/50 shadow-lg animate-pulse">
-                  <Bot size={12} className="inline mr-1" /> Auto-pilot Active
+                  AI Auto-pilot Active
                 </span>
                 <p className="text-[10px] text-white/70 mt-1 uppercase tracking-widest drop-shadow-md">Tap to take over</p>
               </div>
