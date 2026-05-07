@@ -68,6 +68,11 @@ export function AiMenu() {
   const [botToDelete, setBotToDelete] = useState<string | null>(null);
   const [toast, setToast] = useState<{msg: string, type: 'error' | 'success'} | null>(null);
 
+  // Training configurations
+  const [batchSize, setBatchSize] = useState(100);
+  const [mutationRate, setMutationRate] = useState(15);
+  const [elitism, setElitism] = useState(10);
+
   const showToast = (msg: string, type: 'error' | 'success' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
@@ -122,11 +127,13 @@ export function AiMenu() {
     }
   };
 
-  const startTraining = (count: number = 100) => {
+  const startTraining = () => {
     setTraining(true);
     setTimeout(() => {
       if (engineRef.current) {
-        engineRef.current.currentBatchSize = count;
+        engineRef.current.currentBatchSize = batchSize;
+        engineRef.current.baseMutationRate = mutationRate / 100;
+        engineRef.current.elitismCount = elitism;
         engineRef.current.start();
       }
     }, 100);
@@ -267,9 +274,61 @@ export function AiMenu() {
                  </div>
               </div>
             ) : (
-              <button onClick={() => startTraining(1000)} className="w-full bg-cyan-600 hover:bg-cyan-500 py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-[0_4px_0_#155e75] active:translate-y-1 active:shadow-none transition-all">
-                <Play size={20} /> START TRAINING (1k BIRDS)
-              </button>
+              <div className="flex flex-col gap-4">
+                <div className="bg-neutral-800 p-4 rounded-xl flex flex-col gap-4 border border-neutral-700/50">
+                  <h3 className="font-bold text-lg text-cyan-400">Training Config</h3>
+                  
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm text-neutral-400 flex justify-between">
+                      <span>Batch Size (Birds)</span>
+                      <span className="text-white font-mono">{batchSize}</span>
+                    </label>
+                    <input 
+                      type="range" 
+                      min="10" 
+                      max="2000" 
+                      step="10" 
+                      value={batchSize} 
+                      onChange={(e) => setBatchSize(Number(e.target.value))} 
+                      className="accent-cyan-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm text-neutral-400 flex justify-between">
+                      <span>Mutation Rate (%)</span>
+                      <span className="text-white font-mono">{mutationRate}%</span>
+                    </label>
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="100" 
+                      value={mutationRate} 
+                      onChange={(e) => setMutationRate(Number(e.target.value))} 
+                      className="accent-cyan-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm text-neutral-400 flex justify-between">
+                      <span>Elitism Count</span>
+                      <span className="text-white font-mono">{elitism}</span>
+                    </label>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max={Math.floor(batchSize * 0.5)} 
+                      value={Math.min(elitism, Math.floor(batchSize * 0.5))} 
+                      onChange={(e) => setElitism(Number(e.target.value))} 
+                      className="accent-cyan-500"
+                    />
+                  </div>
+                </div>
+
+                <button onClick={() => startTraining()} className="w-full bg-cyan-600 hover:bg-cyan-500 py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-[0_4px_0_#155e75] active:translate-y-1 active:shadow-none transition-all">
+                  <Play size={20} /> START TRAINING
+                </button>
+              </div>
             )}
 
              <h3 className="text-xl font-bold mt-4 border-b border-neutral-700 pb-2">Saved Models</h3>

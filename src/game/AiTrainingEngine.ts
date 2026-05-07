@@ -7,7 +7,9 @@ export class BirdBrain {
   public rotation = 0;
   public dead = false;
   public score = 0;
+  public fitness = 0;
   public brain: NeuralNetwork;
+  public flapCooldown = 0;
 
   constructor(brain?: NeuralNetwork) {
     if (brain) {
@@ -18,7 +20,10 @@ export class BirdBrain {
   }
 
   flap() {
-    this.velocity = -6.5;
+    if (this.flapCooldown <= 0) {
+      this.velocity = -8;
+      this.flapCooldown = 8; // Small cooldown to force natural parabolic arcs instead of robotic micro-bouncing
+    }
   }
 }
 
@@ -33,7 +38,7 @@ export class AiTrainingEngine {
   private width: number;
   private height: number;
   private groundHeight = 100;
-  private gravity = 0.3;
+  private gravity = 0.45;
   private basePipeSpeed = 3;
   private basePipeGap = 160;
 
@@ -48,14 +53,16 @@ export class AiTrainingEngine {
   public generation = 1;
   public allTimeScore = 0; // Current run score
   
+  public currentBatchSize = 100;
+  public baseMutationRate = 0.15;
+  public elitismCount = Math.floor(100 * 0.1); // default 10%
+  
   public bestAllTimeBrain: NeuralNetwork | null = null;
   public bestAllTimeScoreValue = 0;
   public bestAllTimeGen = 1;
 
   private theme = THEMES.classic;
   public isRunning = false;
-
-  public currentBatchSize = 100;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -100,6 +107,14 @@ export class AiTrainingEngine {
     this.frames = 0;
     this.pipes = [];
     this.birds = [];
+    
+    if (brains.length === 0) {
+       this.generation = 1;
+       this.allTimeScore = 0;
+       this.bestAllTimeBrain = null;
+       this.bestAllTimeScoreValue = 0;
+       this.bestAllTimeGen = 1;
+    }
     
     if (brains.length > 0) {
       this.currentBatchSize = brains.length;
@@ -160,10 +175,10 @@ export class AiTrainingEngine {
       return;
     }
 
-    const speedDifficultyRatio = Math.min(maxScore / 20, 1);
-    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 3);
-    const splitRatio = Math.min(maxScore / 30, 1);
-    const currentPipeGap = Math.max(100, this.basePipeGap - (splitRatio * 40));
+    const speedDifficultyRatio = Math.min(Math.floor(maxScore) / 50, 1);
+    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 1.5);
+    const splitRatio = Math.min(Math.floor(maxScore) / 50, 1);
+    const currentPipeGap = Math.max(120, this.basePipeGap - (splitRatio * 30));
 
     this.groundOffset = (this.groundOffset + currentPipeSpeed) % 40;
     this.layerBackOffset = this.layerBackOffset + currentPipeSpeed * 0.15;
@@ -196,17 +211,21 @@ export class AiTrainingEngine {
     for (let bird of this.birds) {
       if (bird.dead) continue;
       
+      if (bird.flapCooldown > 0) {
+        bird.flapCooldown--;
+      }
+
       bird.velocity += this.gravity;
       bird.y += bird.velocity;
 
       // Predict if flap needed
       if (closestPipe) {
         const inputs = [
-          bird.y / this.height,
+          bird.y / 700,
           bird.velocity / 10,
-          closestPipe.gapY / this.height,
-          (closestPipe.gapY + currentPipeGap) / this.height,
-          closestPipe.x / this.width
+          (closestPipe.x - 40) / 400,
+          closestPipe.gapY / 700,
+          (closestPipe.gapY + currentPipeGap) / 700
         ];
         
         const output = bird.brain.predict(inputs);
@@ -258,23 +277,46 @@ export class AiTrainingEngine {
         }
       }
 
+      // Exact same scoring logic as GameEngine
+      if (p.x + 60 < 40 && !(p as any).scored) {
+        (p as any).scored = true;
+        for (let bird of this.birds) {
+          if (!bird.dead) {
+             bird.score++;
+             bird.fitness += 1000;
+          }
+        }
+      }
+
       if (p.x + 60 < 0) {
         this.pipes.splice(i, 1);
       }
     }
-
-    if (this.pipes.length > 0) {
-      if (prevFirstPipeX > 40 && this.pipes[0].x <= 40) {
-        for (let bird of this.birds) {
-          if (!bird.dead) bird.score++;
-        }
+    
+    // Calculate continuous fitness
+    // Find closest pipe
+    let closestPipeOuter = null;
+    for (let p of this.pipes) {
+      if (p.x + 60 > 40 - 14) {
+        closestPipeOuter = p;
+        break;
       }
     }
-    
-    // Force death if taking too long to score (stuck logic)
+
+    const gapCenterOuter = closestPipeOuter ? closestPipeOuter.gapY + currentPipeGap * 0.5 : this.height / 2;
+
     for (let bird of this.birds) {
         if (!bird.dead) {
-            bird.score += 0.001; // Reward standing alive a tiny bit
+            bird.fitness += 1; // survival base
+            
+            const dist = Math.abs(bird.y - gapCenterOuter);
+            if (dist < currentPipeGap * 0.5) {
+                // Highly reward being vertically aligned inside the gap bounds
+                bird.fitness += 3;
+            } else {
+                // Diminishing returns the further away they are
+                bird.fitness += Math.max(0, 1.5 - (dist / 150));
+            }
         }
     }
   }
@@ -283,7 +325,7 @@ export class AiTrainingEngine {
     // Evaluation 
     let bestBird = this.birds[0];
     for (let bird of this.birds) {
-      if (bird.score > bestBird.score) {
+      if (bird.fitness > bestBird.fitness) {
         bestBird = bird;
       }
     }
@@ -301,17 +343,59 @@ export class AiTrainingEngine {
     this.generation++;
     const nextBrains: NeuralNetwork[] = [];
     
+    // Sort birds by fitness
+    const sortedBirds = [...this.birds].sort((a, b) => b.fitness - a.fitness);
+    
     // Elitism: keep best of all time AND best of current generation
-    if (this.bestAllTimeBrain) {
+    let eliteCountPushed = 0;
+    if (this.bestAllTimeBrain && this.elitismCount > 0) {
        nextBrains.push(this.bestAllTimeBrain.copy());
+       eliteCountPushed++;
     }
-    nextBrains.push(bestBird.brain.copy());
+    if (this.elitismCount > eliteCountPushed) {
+       nextBrains.push(bestBird.brain.copy());
+       eliteCountPushed++;
+    }
+    
+    // Additional requested elitism from sorted birds
+    for (let i = 0; i < sortedBirds.length && eliteCountPushed < this.elitismCount; i++) {
+        if (sortedBirds[i] !== bestBird) {
+            nextBrains.push(sortedBirds[i].brain.copy());
+            eliteCountPushed++;
+        }
+    }
 
-    for (let i = nextBrains.length; i < this.currentBatchSize; i++) {
-        // Randomly choose between mutating the all-time best or the current generation's best
-        const parent = (this.bestAllTimeBrain && Math.random() < 0.5) ? this.bestAllTimeBrain.copy() : bestBird.brain.copy();
-        const child = parent;
-        child.mutate(0.1); 
+    // Top 20% of birds get copied untouched or mildly mutated
+    const topCount = Math.max(2, Math.floor(this.currentBatchSize * 0.2));
+    for (let i = 0; i < topCount && nextBrains.length < this.currentBatchSize; i++) {
+        const topBird = sortedBirds[i].brain.copy();
+        if (Math.random() < 0.5) topBird.mutate(0.05); // slight tweak
+        nextBrains.push(topBird);
+    }
+
+    // Dynamic mutation rate (Decay)
+    const currentMutationRate = Math.max(0.01, this.baseMutationRate * Math.pow(0.98, this.generation - 1));
+
+    // Fill the rest with crossover and mutations
+    while (nextBrains.length < this.currentBatchSize) {
+        // Tournament Selection
+        const pickParent = () => {
+             const tournamentSize = Math.max(2, Math.floor(this.currentBatchSize * 0.1));
+             let best = sortedBirds[Math.floor(Math.random() * sortedBirds.length)];
+             for (let i = 1; i < tournamentSize; i++) {
+                 const contender = sortedBirds[Math.floor(Math.random() * sortedBirds.length)];
+                 if (contender.fitness > best.fitness) best = contender;
+             }
+             return best.brain;
+        };
+
+        const p1 = pickParent();
+        const p2 = (this.bestAllTimeBrain && Math.random() < 0.3) ? this.bestAllTimeBrain : pickParent();
+        
+        let child = p1.crossover(p2);
+        
+        // Mutate child
+        child.mutate(currentMutationRate); 
         nextBrains.push(child);
     }
     

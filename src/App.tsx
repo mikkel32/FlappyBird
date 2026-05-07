@@ -14,7 +14,7 @@ export default function App() {
   const engineRef = useRef<GameEngine | null>(null);
 
   // Layout calculations
-  const [dimensions, setDimensions] = useState({ w: 400, h: 600 });
+  const [dimensions, setDimensions] = useState({ w: 400, h: 700 });
   const [resetConfirm, setResetConfirm] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -31,20 +31,6 @@ export default function App() {
   useEffect(() => {
     audioContext.setVolumes(sfxVolume, musicVolume);
   }, [sfxVolume, musicVolume]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        setDimensions({
-          w: containerRef.current.clientWidth,
-          h: containerRef.current.clientHeight
-        });
-      }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     if (canvasRef.current && !engineRef.current) {
@@ -141,7 +127,7 @@ export default function App() {
           ref={canvasRef}
           width={dimensions.w}
           height={dimensions.h}
-          className="block absolute top-0 left-0 bg-transparent"
+          className="block absolute top-0 left-0 bg-transparent w-full h-full"
         />
 
         {/* HUD */}

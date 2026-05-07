@@ -16,8 +16,8 @@ export class GameEngine {
   private width: number;
   private height: number;
   private groundHeight = 100;
-  private gravity = 0.3;
-  private jumpStrength = -6.5;
+  private gravity = 0.45;
+  private jumpStrength = -8;
   private basePipeSpeed = 3;
   private basePipeGap = 160;
 
@@ -29,6 +29,7 @@ export class GameEngine {
   private score = 0;
   private currentJumps = 0;
   private frames = 0;
+  private flapCooldown = 0;
   private groundOffset = 0;
   private layerBackOffset = 0;
   private layerFrontOffset = 0;
@@ -105,6 +106,7 @@ export class GameEngine {
     this.score = 0;
     this.currentJumps = 0;
     this.frames = 0;
+    this.flapCooldown = 0;
     this.groundOffset = 0;
     this.isDead = false;
     this.paused = false;
@@ -131,10 +133,11 @@ export class GameEngine {
   }
 
   public flap() {
-    if (this.paused || this.isDead || this.state !== 'playing') return;
+    if (this.paused || this.isDead || this.state !== 'playing' || this.flapCooldown > 0) return;
     this.birdVelocity = this.jumpStrength;
     this.birdRotation = -Math.PI / 4; // Point up
     this.currentJumps++;
+    this.flapCooldown = 8;
     audioContext.playFlap();
   }
 
@@ -199,10 +202,10 @@ export class GameEngine {
     }
 
     // Difficulty scaling
-    const speedDifficultyRatio = Math.min(this.score / 20, 1); // Max out at score=20
-    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 3);
-    const splitRatio = Math.min(this.score / 30, 1);
-    const currentPipeGap = Math.max(100, this.basePipeGap - (splitRatio * 40));
+    const speedDifficultyRatio = Math.min(this.score / 50, 1); // Ramps up slowly
+    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 1.5); // Hard cap on speed
+    const splitRatio = Math.min(this.score / 50, 1);
+    const currentPipeGap = Math.max(120, this.basePipeGap - (splitRatio * 30));
 
     // Ground and Parallax movement
     this.groundOffset = (this.groundOffset + currentPipeSpeed) % 40;
@@ -225,6 +228,7 @@ export class GameEngine {
     }
 
     // Bird physics
+    if (this.flapCooldown > 0) this.flapCooldown--;
     this.birdVelocity += this.gravity;
     this.birdY += this.birdVelocity;
 
@@ -489,9 +493,9 @@ export class GameEngine {
       this.ctx.strokeRect(p.x, 0, 60, pTopH);
 
       // Bottom pipe
-      const speedDifficultyRatio = Math.min(this.score / 20, 1);
-      const splitRatio = Math.min(this.score / 30, 1);
-      const currentPipeGap = Math.max(100, this.basePipeGap - (splitRatio * 40));
+      const speedDifficultyRatio = Math.min(this.score / 50, 1);
+      const splitRatio = Math.min(this.score / 50, 1);
+      const currentPipeGap = Math.max(120, this.basePipeGap - (splitRatio * 30));
       
       let pBottomY = p.gapY + currentPipeGap;
       let pBottomH = floorY - pBottomY;
@@ -660,11 +664,11 @@ export class GameEngine {
 
      if (this.brain && nextPipe) {
         const inputs = [
-          this.birdY / this.height,
+          this.birdY / 700,
           this.birdVelocity / 10,
-          nextPipe.gapY / this.height,
-          (nextPipe.gapY + currentPipeGap) / this.height,
-          nextPipe.x / this.width
+          (nextPipe.x - 40) / 400,
+          nextPipe.gapY / 700,
+          (nextPipe.gapY + currentPipeGap) / 700
         ];
         const output = this.brain.predict(inputs);
         if (output[0] > 0.5) {
@@ -674,29 +678,61 @@ export class GameEngine {
      }
 
      if (nextPipe) {
-         const gapCenter = nextPipe.gapY + currentPipeGap * 0.55; 
+         // The bird's jump height is approximately 71px.
+         // To safely avoid the top pipe (y = nextPipe.gapY), peak must be >= gapY + 12.
+         // So we cannot flap if birdY < gapY + 12 + 71.1 = gapY + 83.1
+         const minSafeTrigger = nextPipe.gapY + 86; 
          
-         // If we are way below the target (need to climb fast)
-         if (this.birdY > gapCenter + 40) {
-             // Flap earlier to climb faster (don't wait for velocity to be >= 0)
-             if (this.birdVelocity > -3) {
-                 this.flap();
+         // To avoid hitting the bottom pipe, we must flap before birdY + 10 exceeds gapY + gap.
+         // Accounting for max fall velocity overshoot (~5px), safe max is bottom - 20.
+         const maxSafeTrigger = nextPipe.gapY + currentPipeGap - 20;
+
+         // Determine where we WANT to be based on the pipe AFTER this one (if visible)
+         let nextNextPipe = null;
+         for (let p of this.pipes) {
+             if (p.x > nextPipe.x + 10) { // guarantee it's the next next pipe
+                 nextNextPipe = p;
+                 break;
              }
-         } else if (this.birdY > gapCenter + 10) {
-             // Normal maintain level
-             if (this.birdVelocity >= 0 && this.birdY - 60 > nextPipe.gapY) {
+         }
+
+         let desiredTrigger = nextPipe.gapY + 86; // Default to hugging top pipe for maximum flexibility
+         if (nextNextPipe) {
+             // For the next pipe, target hugging its top as well
+             desiredTrigger = nextNextPipe.gapY + 86;
+         }
+
+         // Clamp our desired trigger to the safe range of the CURRENT pipe
+         const triggerY = Math.max(minSafeTrigger, Math.min(maxSafeTrigger, desiredTrigger));
+
+         let shouldFlap = false;
+
+         // 1. Predictive falling: If we are going to cross the trigger line and are falling.
+         const futureY = this.birdY + this.birdVelocity * 2.5;
+         if (futureY >= triggerY && this.birdVelocity >= 0) {
+             shouldFlap = true;
+         }
+         
+         // 2. Aggressive climb: if we are severely below the safe range (e.g., initial approach 
+         // into a much higher pipe) we need to flap rapidly to climb.
+         if (this.birdY > maxSafeTrigger + 10 && this.birdVelocity > -4) {
+             shouldFlap = true;
+         }
+
+         if (shouldFlap) {
+             // Absolute Ceiling Guard: Never flap if it mathematically crashes us into the top pipe!
+             if (this.birdY >= minSafeTrigger) {
                  this.flap();
              }
          }
          
-         // Emergency avoid bottom pipe
-         const futureY = this.birdY + this.birdVelocity * 3;
-         if (futureY > nextPipe.gapY + currentPipeGap - 18 && this.birdVelocity >= 0) {
+         // Absolute emergency ground avoidance overrides pipe logic
+         if (this.birdY > floorY - 26 && this.birdVelocity >= 0) {
              this.flap();
          }
      } else {
-         // No pipes, stay around the middle
-         if (this.birdY > this.height / 2 && this.birdVelocity >= 0) {
+         // Gentle bounces before pipes spawn
+         if (this.birdY > this.height / 2 + 10 && this.birdVelocity >= 0) {
              this.flap();
          }
      }

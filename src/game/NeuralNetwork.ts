@@ -27,7 +27,7 @@ export class NeuralNetwork {
     const hiddenInputs = this.weightsIH.map((row, i) =>
       row.reduce((sum, weight, j) => sum + weight * inputArray[j], 0) + this.biasH[i]
     );
-    const hiddenOutputs = hiddenInputs.map(this.relu);
+    const hiddenOutputs = hiddenInputs.map(this.tanh);
 
     // Hidden to Output
     const outputInputs = this.weightsHO.map((row, i) =>
@@ -38,8 +38,8 @@ export class NeuralNetwork {
     return outputs;
   }
 
-  relu(x: number) {
-    return Math.max(0, x);
+  tanh(x: number) {
+    return Math.tanh(x);
   }
 
   sigmoid(x: number) {
@@ -55,10 +55,30 @@ export class NeuralNetwork {
     return nn;
   }
 
+  crossover(other: NeuralNetwork): NeuralNetwork {
+    const child = new NeuralNetwork(this.inputNodes, this.hiddenNodes, this.outputNodes);
+    const crossArray = (arr1: number[], arr2: number[]) => 
+      arr1.map((val, i) => Math.random() < 0.5 ? val : arr2[i]);
+    const crossMatrix = (mat1: number[][], mat2: number[][]) => 
+      mat1.map((row, i) => crossArray(row, mat2[i]));
+
+    child.weightsIH = crossMatrix(this.weightsIH, other.weightsIH);
+    child.weightsHO = crossMatrix(this.weightsHO, other.weightsHO);
+    child.biasH = crossArray(this.biasH, other.biasH);
+    child.biasO = crossArray(this.biasO, other.biasO);
+    return child;
+  }
+
   mutate(rate: number) {
     const mutateFunc = (val: number) => {
       if (Math.random() < rate) {
-        return val + (Math.random() * 2 - 1) * 0.5;
+        // 10% chance to completely reassign the weight
+        if (Math.random() < 0.1) {
+          return Math.random() * 2 - 1;
+        }
+        // Small gaussian-like mutation
+        let offset = (Math.random() * 2 - 1) + (Math.random() * 2 - 1) + (Math.random() * 2 - 1);
+        return val + (offset * 0.3); // roughly normal distributed
       }
       return val;
     };
