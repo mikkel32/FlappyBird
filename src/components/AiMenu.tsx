@@ -102,6 +102,11 @@ export function AiMenu() {
         setAlive(aliveNum);
         setAllTimeBestScore(bestScore);
         setAllTimeBestGen(bestGen);
+        
+        // Capture brain in real-time
+        if (engineRef.current?.bestAllTimeBrain) {
+          bestBrainRef.current = engineRef.current.bestAllTimeBrain;
+        }
       };
     }
   }, [training]);
@@ -139,13 +144,30 @@ export function AiMenu() {
     }, 100);
   };
 
+  const [isPaused, setIsPaused] = useState(false);
+
   const stopTraining = () => {
     engineRef.current?.stop();
     setTraining(false);
+    setIsPaused(false);
+  };
+
+  const togglePause = () => {
+    if (!engineRef.current) return;
+    engineRef.current.togglePause();
+    setIsPaused(!engineRef.current.isRunning);
   };
 
   const saveBest = async () => {
-    if (!user || !bestBrainRef.current) return;
+    // Priority: 1. Engine's live state, 2. Engine's all-time record, 3. Ref fallback
+    const bestData = engineRef.current?.getBestBrain();
+    const brainToSave = bestData?.brain || engineRef.current?.bestAllTimeBrain || bestBrainRef.current;
+    
+    if (!user || !brainToSave) return;
+    
+    const finalScore = bestData?.score ?? (allTimeBestScore > 0 ? allTimeBestScore : maxScore);
+    const finalGen = bestData?.gen ?? (allTimeBestGen || engineRef.current?.generation || 1);
+
     try {
       const docId = `bot-${Date.now()}`;
       
@@ -174,9 +196,9 @@ export function AiMenu() {
       const botDoc = doc(db, 'users', user.uid, 'bots', docId);
       try {
         await setDoc(botDoc, {
-          weights: bestBrainRef.current.serialize(),
-          score: allTimeBestScore > 0 ? allTimeBestScore : maxScore,
-          generation: allTimeBestGen || engineRef.current?.generation || 1,
+          weights: brainToSave.serialize(),
+          score: finalScore,
+          generation: finalGen,
           createdAt: serverTimestamp()
         });
       } catch (e) {
@@ -266,12 +288,18 @@ export function AiMenu() {
                        )}
                     </div>
                  </div>
-                 <div className="flex gap-2">
-                   <button onClick={stopTraining} className="flex-1 bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold">Stop</button>
-                   <button onClick={saveBest} className="flex-1 bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
-                     <Save size={18} /> Save Best
-                   </button>
-                 </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={togglePause}
+                      className={`flex-1 ${isPaused ? 'bg-green-600 hover:bg-green-500' : 'bg-amber-600 hover:bg-amber-500'} py-3 rounded-xl font-bold transition-colors`}
+                    >
+                      {isPaused ? 'Resume' : 'Pause'}
+                    </button>
+                    <button onClick={stopTraining} className="flex-1 bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold">Stop</button>
+                    <button onClick={saveBest} className="flex-1 bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                      <Save size={18} /> Save Best
+                    </button>
+                  </div>
               </div>
             ) : (
               <div className="flex flex-col gap-4">

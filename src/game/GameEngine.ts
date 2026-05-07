@@ -2,6 +2,52 @@ import { THEMES } from '../store';
 import { audioContext } from './AudioEngine';
 import { NeuralNetwork } from './NeuralNetwork';
 
+export class PerfectMechanicalBot {
+  /**
+   * Mechanically calculates the absolute perfect time to flap.
+   * Uses future-frame velocity prediction to thread the needle flawlessly.
+   */
+  static shouldFlap(
+    bird: { y: number; velocity: number; radius: number },
+    nextPipe: { topY: number; bottomY: number } | null,
+    gravity: number = 0.45,
+    flapVelocity: number = -8
+  ): boolean {
+    // 1. Hover gracefully in the center if no pipes are generated yet
+    if (!nextPipe) return bird.y > 300 && bird.velocity >= 0;
+
+    // 2. The Sweet Spot (We target slightly below the absolute center of the gap)
+    const gapCenter = nextPipe.topY + (nextPipe.bottomY - nextPipe.topY) * 0.6;
+    const padding = bird.radius + 2;
+
+    // 3. Upward Travel Constraint (Kinematics: v^2 = u^2 + 2as)
+    // Calculates exactly how high a single flap will take us before gravity pulls us back down.
+    const maxUpwardTravel = Math.pow(flapVelocity, 2) / (2 * gravity);
+    
+    // 4. Future Kinematic Prediction
+    // Project exactly where gravity will pull us in the next 4 frames
+    const lookaheadFrames = 4;
+    const predictedY = bird.y + (bird.velocity * lookaheadFrames) + (0.5 * gravity * Math.pow(lookaheadFrames, 2));
+
+    // Calculate our exact peak altitude if we were to flap RIGHT NOW
+    const predictedApexIfFlap = bird.y - maxUpwardTravel;
+    const safeFromTopPipe = predictedApexIfFlap > (nextPipe.topY + padding);
+
+    // 5. Tactical Flap Decision Matrix
+    // Flap if our future trajectory plummets below the optimal line AND we are mathematically safe from the ceiling
+    if (predictedY > gapCenter && bird.velocity >= 0 && safeFromTopPipe) {
+      return true;
+    }
+
+    // Emergency Catch: if we are dangerously close to hitting the bottom pipe
+    if (bird.y + bird.velocity + padding > nextPipe.bottomY && safeFromTopPipe) {
+      return true;
+    }
+
+    return false;
+  }
+}
+
 export class GameEngine {
   public canvas: HTMLCanvasElement;
   public ctx: CanvasRenderingContext2D;
@@ -18,7 +64,7 @@ export class GameEngine {
   private groundHeight = 100;
   private gravity = 0.45;
   private jumpStrength = -8;
-  private basePipeSpeed = 3;
+  private basePipeSpeed = 1.5;
   private basePipeGap = 160;
 
   // Dynamic game state
@@ -203,7 +249,7 @@ export class GameEngine {
 
     // Difficulty scaling
     const speedDifficultyRatio = Math.min(this.score / 50, 1); // Ramps up slowly
-    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 1.5); // Hard cap on speed
+    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 0.75); // Hard cap on speed
     const splitRatio = Math.min(this.score / 50, 1);
     const currentPipeGap = Math.max(120, this.basePipeGap - (splitRatio * 30));
 
@@ -663,13 +709,16 @@ export class GameEngine {
      }
 
      if (this.brain && nextPipe) {
+        // Hyper-Optimized Neural Network Inputs
+        const birdRadius = 14;
         const inputs = [
-          this.birdY / 700,
-          this.birdVelocity / 10,
-          (nextPipe.x - 40) / 400,
-          nextPipe.gapY / 700,
-          (nextPipe.gapY + currentPipeGap) / 700
+          this.birdY / this.height,                        // 1. Normalized Y position
+          (this.birdVelocity + 15) / 30,                   // 2. Normalized Velocity
+          Math.max(0, nextPipe.x - birdX) / this.width,    // 3. Distance to the gap
+          nextPipe.gapY / this.height,                     // 4. Safe gap ceiling
+          (nextPipe.gapY + currentPipeGap) / this.height   // 5. Safe gap floor
         ];
+        
         const output = this.brain.predict(inputs);
         if (output[0] > 0.5) {
           this.flap();
@@ -677,64 +726,20 @@ export class GameEngine {
         return;
      }
 
-     if (nextPipe) {
-         // The bird's jump height is approximately 71px.
-         // To safely avoid the top pipe (y = nextPipe.gapY), peak must be >= gapY + 12.
-         // So we cannot flap if birdY < gapY + 12 + 71.1 = gapY + 83.1
-         const minSafeTrigger = nextPipe.gapY + 86; 
-         
-         // To avoid hitting the bottom pipe, we must flap before birdY + 10 exceeds gapY + gap.
-         // Accounting for max fall velocity overshoot (~5px), safe max is bottom - 20.
-         const maxSafeTrigger = nextPipe.gapY + currentPipeGap - 20;
+     // Mechanically Perfect BOT (TAS Logic)
+     const pipeData = nextPipe ? { topY: nextPipe.gapY, bottomY: nextPipe.gapY + currentPipeGap } : null;
+     if (PerfectMechanicalBot.shouldFlap(
+       { y: this.birdY, velocity: this.birdVelocity, radius: 14 },
+       pipeData,
+       this.gravity,
+       this.jumpStrength
+     )) {
+       this.flap();
+     }
 
-         // Determine where we WANT to be based on the pipe AFTER this one (if visible)
-         let nextNextPipe = null;
-         for (let p of this.pipes) {
-             if (p.x > nextPipe.x + 10) { // guarantee it's the next next pipe
-                 nextNextPipe = p;
-                 break;
-             }
-         }
-
-         let desiredTrigger = nextPipe.gapY + 86; // Default to hugging top pipe for maximum flexibility
-         if (nextNextPipe) {
-             // For the next pipe, target hugging its top as well
-             desiredTrigger = nextNextPipe.gapY + 86;
-         }
-
-         // Clamp our desired trigger to the safe range of the CURRENT pipe
-         const triggerY = Math.max(minSafeTrigger, Math.min(maxSafeTrigger, desiredTrigger));
-
-         let shouldFlap = false;
-
-         // 1. Predictive falling: If we are going to cross the trigger line and are falling.
-         const futureY = this.birdY + this.birdVelocity * 2.5;
-         if (futureY >= triggerY && this.birdVelocity >= 0) {
-             shouldFlap = true;
-         }
-         
-         // 2. Aggressive climb: if we are severely below the safe range (e.g., initial approach 
-         // into a much higher pipe) we need to flap rapidly to climb.
-         if (this.birdY > maxSafeTrigger + 10 && this.birdVelocity > -4) {
-             shouldFlap = true;
-         }
-
-         if (shouldFlap) {
-             // Absolute Ceiling Guard: Never flap if it mathematically crashes us into the top pipe!
-             if (this.birdY >= minSafeTrigger) {
-                 this.flap();
-             }
-         }
-         
-         // Absolute emergency ground avoidance overrides pipe logic
-         if (this.birdY > floorY - 26 && this.birdVelocity >= 0) {
-             this.flap();
-         }
-     } else {
-         // Gentle bounces before pipes spawn
-         if (this.birdY > this.height / 2 + 10 && this.birdVelocity >= 0) {
-             this.flap();
-         }
+     // Floor avoidance safety fallback
+     if (this.birdY > floorY - 26) {
+       this.flap();
      }
   }
 }

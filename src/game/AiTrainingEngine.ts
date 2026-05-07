@@ -39,7 +39,7 @@ export class AiTrainingEngine {
   private height: number;
   private groundHeight = 100;
   private gravity = 0.45;
-  private basePipeSpeed = 3;
+  private basePipeSpeed = 1.5;
   private basePipeGap = 160;
 
   private birds: BirdBrain[] = [];
@@ -140,6 +140,51 @@ export class AiTrainingEngine {
     if (this.reqId) cancelAnimationFrame(this.reqId);
   }
 
+  /**
+   * Returns the absolute best brain found during this training session.
+   * If there is a bird currently alive that has beaten the all-time record, it returns that.
+   */
+  public getBestBrain(): { brain: NeuralNetwork, score: number, gen: number } | null {
+    let currentBestBird: BirdBrain | null = null;
+    let currentMaxScore = -1;
+
+    for (const bird of this.birds) {
+      if (!bird.dead && bird.score > currentMaxScore) {
+        currentMaxScore = bird.score;
+        currentBestBird = bird;
+      }
+    }
+
+    // If a currently alive bird is better or equal to our saved best, return it
+    if (currentBestBird && Math.floor(currentMaxScore) >= this.bestAllTimeScoreValue) {
+      return {
+        brain: currentBestBird.brain.copy(),
+        score: Math.floor(currentMaxScore),
+        gen: this.generation
+      };
+    }
+
+    // Otherwise return our session record holder
+    if (this.bestAllTimeBrain) {
+      return {
+        brain: this.bestAllTimeBrain.copy(),
+        score: this.bestAllTimeScoreValue,
+        gen: this.bestAllTimeGen
+      };
+    }
+
+    return null;
+  }
+
+  public togglePause() {
+    if (this.isRunning) {
+      this.stop();
+    } else {
+      this.isRunning = true;
+      this.loop();
+    }
+  }
+
   private loop = () => {
     if (!this.isRunning) return;
     
@@ -160,14 +205,31 @@ export class AiTrainingEngine {
 
     let aliveCount = 0;
     let maxScore = 0;
+    let bestCurrentBird: BirdBrain | null = null;
 
     for (let bird of this.birds) {
       if (bird.dead) continue;
       aliveCount++;
-      if (bird.score > maxScore) maxScore = bird.score;
+      if (bird.score > maxScore) {
+        maxScore = bird.score;
+        bestCurrentBird = bird;
+      }
     }
 
-    if (maxScore > this.allTimeScore) this.allTimeScore = maxScore;
+    if (maxScore > this.allTimeScore) {
+      this.allTimeScore = maxScore;
+    }
+
+    // Track absolute best in real-time so user can save mid-run
+    if (Math.floor(maxScore) > this.bestAllTimeScoreValue) {
+      this.bestAllTimeScoreValue = Math.floor(maxScore);
+      this.bestAllTimeGen = this.generation;
+      if (bestCurrentBird) {
+        // Capture a clean version of the current record holder
+        this.bestAllTimeBrain = bestCurrentBird.brain.copy();
+      }
+    }
+
     if (this.onScoreUpdate) this.onScoreUpdate(maxScore, aliveCount, this.bestAllTimeScoreValue, this.bestAllTimeGen);
 
     if (aliveCount === 0) {
@@ -176,7 +238,7 @@ export class AiTrainingEngine {
     }
 
     const speedDifficultyRatio = Math.min(Math.floor(maxScore) / 50, 1);
-    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 1.5);
+    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 0.75);
     const splitRatio = Math.min(Math.floor(maxScore) / 50, 1);
     const currentPipeGap = Math.max(120, this.basePipeGap - (splitRatio * 30));
 
@@ -221,11 +283,11 @@ export class AiTrainingEngine {
       // Predict if flap needed
       if (closestPipe) {
         const inputs = [
-          bird.y / 700,
-          bird.velocity / 10,
-          (closestPipe.x - 40) / 400,
-          closestPipe.gapY / 700,
-          (closestPipe.gapY + currentPipeGap) / 700
+          bird.y / this.height,
+          (bird.velocity + 15) / 30,
+          Math.max(0, closestPipe.x - 40) / this.width,
+          closestPipe.gapY / this.height,
+          (closestPipe.gapY + currentPipeGap) / this.height
         ];
         
         const output = bird.brain.predict(inputs);
@@ -343,63 +405,51 @@ export class AiTrainingEngine {
     this.generation++;
     const nextBrains: NeuralNetwork[] = [];
     
-    // Sort birds by fitness
+    // Sort birds by fitness descending
     const sortedBirds = [...this.birds].sort((a, b) => b.fitness - a.fitness);
-    
-    // Elitism: keep best of all time AND best of current generation
-    let eliteCountPushed = 0;
-    if (this.bestAllTimeBrain && this.elitismCount > 0) {
-       nextBrains.push(this.bestAllTimeBrain.copy());
-       eliteCountPushed++;
-    }
-    if (this.elitismCount > eliteCountPushed) {
-       nextBrains.push(bestBird.brain.copy());
-       eliteCountPushed++;
+
+    // Strict Elitism: Carry over top 5% untouched
+    const eliteCount = Math.max(2, Math.floor(this.currentBatchSize * 0.05));
+    for (let i = 0; i < eliteCount; i++) {
+       nextBrains.push(sortedBirds[i].brain.clone());
     }
     
-    // Additional requested elitism from sorted birds
-    for (let i = 0; i < sortedBirds.length && eliteCountPushed < this.elitismCount; i++) {
-        if (sortedBirds[i] !== bestBird) {
-            nextBrains.push(sortedBirds[i].brain.copy());
-            eliteCountPushed++;
-        }
+    // Always preserve absolute best across all generations if elitism doesn't capture it implicitly
+    if (this.bestAllTimeBrain && eliteCount < this.currentBatchSize) {
+        nextBrains[eliteCount - 1] = this.bestAllTimeBrain.clone();
     }
 
-    // Top 20% of birds get copied untouched or mildly mutated
-    const topCount = Math.max(2, Math.floor(this.currentBatchSize * 0.2));
-    for (let i = 0; i < topCount && nextBrains.length < this.currentBatchSize; i++) {
-        const topBird = sortedBirds[i].brain.copy();
-        if (Math.random() < 0.5) topBird.mutate(0.05); // slight tweak
-        nextBrains.push(topBird);
-    }
+    // Simulated Annealing: Adjust mutation based on mastery
+    let mutationRate = 0.15;
+    let mutationIntensity = 0.5;
+    if (this.bestAllTimeScoreValue > 10) { mutationRate = 0.05; mutationIntensity = 0.2; }
+    if (this.bestAllTimeScoreValue > 50) { mutationRate = 0.01; mutationIntensity = 0.05; } // Pure micro-tuning
 
-    // Dynamic mutation rate (Decay)
-    const currentMutationRate = Math.max(0.01, this.baseMutationRate * Math.pow(0.98, this.generation - 1));
-
-    // Fill the rest with crossover and mutations
+    // Fill the rest with tournament selection and crossover
     while (nextBrains.length < this.currentBatchSize) {
-        // Tournament Selection
-        const pickParent = () => {
-             const tournamentSize = Math.max(2, Math.floor(this.currentBatchSize * 0.1));
-             let best = sortedBirds[Math.floor(Math.random() * sortedBirds.length)];
-             for (let i = 1; i < tournamentSize; i++) {
-                 const contender = sortedBirds[Math.floor(Math.random() * sortedBirds.length)];
-                 if (contender.fitness > best.fitness) best = contender;
-             }
-             return best.brain;
-        };
-
-        const p1 = pickParent();
-        const p2 = (this.bestAllTimeBrain && Math.random() < 0.3) ? this.bestAllTimeBrain : pickParent();
+        const parentA = this.tournamentSelection();
+        const parentB = this.tournamentSelection();
+        const child = NeuralNetwork.crossover(parentA, parentB);
         
-        let child = p1.crossover(p2);
-        
-        // Mutate child
-        child.mutate(currentMutationRate); 
+        child.mutate(mutationRate, mutationIntensity);
         nextBrains.push(child);
     }
     
     this.start(nextBrains);
+  }
+
+  // Tournament Selection strictly prefers better fitness but allows enough randomness for genetic diversity
+  private tournamentSelection(): NeuralNetwork {
+    const tournamentSize = 5;
+    let best = this.birds[Math.floor(Math.random() * this.birds.length)];
+    
+    for (let i = 1; i < tournamentSize; i++) {
+      const contestant = this.birds[Math.floor(Math.random() * this.birds.length)];
+      if (contestant.fitness > best.fitness) {
+        best = contestant;
+      }
+    }
+    return best.brain;
   }
 
   private drawParallax(offset: number, color: string, floorY: number, heightRatio: number, isCity: boolean) {
