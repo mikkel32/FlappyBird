@@ -23,6 +23,7 @@ interface GameState {
   highScore: number;
   sfxVolume: number;
   musicVolume: number;
+  enableShake: boolean;
   themeId: keyof typeof THEMES;
   hasSeenTutorial: boolean;
   stats: GameStats;
@@ -37,6 +38,7 @@ interface GameState {
   updateHighScore: (score: number) => void;
   setSfxVolume: (vol: number) => void;
   setMusicVolume: (vol: number) => void;
+  setEnableShake: (val: boolean) => void;
   setTheme: (themeId: keyof typeof THEMES) => void;
   setAutoPlay: (auto: boolean) => void;
   setIsAiTraining: (ai: boolean) => void;
@@ -56,6 +58,7 @@ export const useGameStore = create<GameState>()(
       highScore: 0,
       sfxVolume: 50,
       musicVolume: 50,
+      enableShake: true,
       themeId: 'classic',
       hasSeenTutorial: false,
       stats: { gamesPlayed: 0, totalJumps: 0, totalScore: 0 },
@@ -70,6 +73,7 @@ export const useGameStore = create<GameState>()(
       updateHighScore: (score) => set((state) => ({ highScore: Math.max(state.highScore, score) })),
       setSfxVolume: (vol) => set({ sfxVolume: vol }),
       setMusicVolume: (vol) => set({ musicVolume: vol }),
+      setEnableShake: (val) => set({ enableShake: val }),
       setTheme: (themeId) => set({ themeId }),
       setAutoPlay: (auto) => set({ autoPlay: auto }),
       setIsAiTraining: (ai) => set({ isAiTraining: ai }),
@@ -99,6 +103,7 @@ export const useGameStore = create<GameState>()(
         highScore: state.highScore,
         sfxVolume: state.sfxVolume,
         musicVolume: state.musicVolume,
+        enableShake: state.enableShake,
         themeId: state.themeId,
         hasSeenTutorial: state.hasSeenTutorial,
         stats: state.stats,

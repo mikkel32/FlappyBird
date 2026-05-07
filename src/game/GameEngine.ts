@@ -1,4 +1,4 @@
-import { THEMES } from '../store';
+import { THEMES, useGameStore } from '../store';
 import { audioContext } from './AudioEngine';
 import { NeuralNetwork } from './NeuralNetwork';
 
@@ -49,16 +49,20 @@ export class PerfectMechanicalBot {
 }
 
 export class Particle {
-  x: number; y: number; vx: number; vy: number; life: number; color: string;
+  x: number; y: number; vx: number; vy: number; life: number; color: string; size: number;
   constructor(x: number, y: number, color: string) {
     this.x = x; this.y = y;
-    this.vx = (Math.random() - 0.5) * 6;
-    this.vy = (Math.random() - 0.5) * 6 - 2; // slight upward bias
+    // Explode powerfully outwards and slightly upwards
+    this.vx = (Math.random() - 0.5) * 12;
+    this.vy = (Math.random() - 0.5) * 12 - 4; 
     this.life = 1.0;
     this.color = color;
+    this.size = Math.random() * 5 + 3; // Random sizes
   }
   update() {
-    this.x += this.vx; this.y += this.vy; this.life -= 0.03;
+    this.vy += 0.4; // Particles have gravity!
+    this.x += this.vx; this.y += this.vy; 
+    this.life -= 0.025; // Fade out gradually
   }
 }
 
@@ -76,10 +80,12 @@ export class GameEngine {
   private width: number;
   private height: number;
   private groundHeight = 100;
-  private gravity = 0.45;
-  private terminalVelocity = 12;
-  private jumpStrength = -8;
-  private basePipeSpeed = 1.5;
+  
+  // Refined Physics (Snappier Game Feel)
+  private gravity = 0.5;
+  private terminalVelocity = 14;
+  private jumpStrength = -8.5;
+  private basePipeSpeed = 2.0;
   private basePipeGap = 160;
 
   // Dynamic game state
@@ -95,7 +101,12 @@ export class GameEngine {
   private groundOffset = 0;
   private layerBackOffset = 0;
   private layerFrontOffset = 0;
+  
+  // "Juice" Effects
   private flashFrames = 0;
+  private shakeFrames = 0;
+  private hitStopFrames = 0;
+
   private clouds: Array<{ x: number, y: number, speed: number, size: number }> = [];
   private stars: Array<{ x: number, y: number, r: number, a: number, t: number }> = [];
   private paused = false;
@@ -170,6 +181,8 @@ export class GameEngine {
     this.currentJumps = 0;
     this.frames = 0;
     this.flapCooldown = 0;
+    this.shakeFrames = 0;
+    this.hitStopFrames = 0;
     this.groundOffset = 0;
     this.isDead = false;
     this.paused = false;
@@ -198,9 +211,9 @@ export class GameEngine {
   public flap() {
     if (this.paused || this.isDead || this.state !== 'playing' || this.flapCooldown > 0) return;
     this.birdVelocity = this.jumpStrength;
-    this.birdRotation = -Math.PI / 4; // Point up
+    this.birdRotation = -Math.PI / 4; 
     this.currentJumps++;
-    this.flapCooldown = 8;
+    this.flapCooldown = 6;
     this.spawnParticles(40, this.birdY, '#ffffff', 5);
     audioContext.playFlap();
   }
@@ -225,8 +238,19 @@ export class GameEngine {
   };
 
   private update() {
+    if (this.hitStopFrames > 0) {
+       this.hitStopFrames--;
+       // Update particles even during hit stop so explosion propagates nicely
+       for (let i = this.particles.length - 1; i >= 0; i--) {
+        this.particles[i].update();
+        if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+       }
+       return; 
+    }
+
     this.frames++;
     if (this.flashFrames > 0) this.flashFrames--;
+    if (this.shakeFrames > 0) this.shakeFrames--;
     
     const floorY = this.height - this.groundHeight;
 
@@ -272,8 +296,8 @@ export class GameEngine {
     }
 
     // Difficulty scaling
-    const speedDifficultyRatio = Math.min(this.score / 50, 1); // Ramps up slowly
-    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 0.75); // Hard cap on speed
+    const speedDifficultyRatio = Math.min(this.score / 40, 1); 
+    const currentPipeSpeed = this.basePipeSpeed + (speedDifficultyRatio * 1.25); 
     const splitRatio = Math.min(this.score / 50, 1);
     const currentPipeGap = Math.max(120, this.basePipeGap - (splitRatio * 30));
 
@@ -466,18 +490,28 @@ export class GameEngine {
   }
 
   private draw() {
+    this.ctx.save(); // Base save to isolate screen shake
+
+    // Apply Screen Shake
+    if (this.shakeFrames > 0) {
+      const magnitude = (this.shakeFrames / 15) * 12; // Starts strong, decays
+      const dx = (Math.random() - 0.5) * magnitude;
+      const dy = (Math.random() - 0.5) * magnitude;
+      this.ctx.translate(dx, dy);
+    }
+
     const floorY = this.height - this.groundHeight;
 
-    // Background Gradient Sky
+    // Fill with slight bleed margin so screen shake doesn't reveal edges
     if (this.theme.bgBottom) {
-      const grad = this.ctx.createLinearGradient(0, 0, 0, floorY);
+      const grad = this.ctx.createLinearGradient(0, -20, 0, floorY + 20);
       grad.addColorStop(0, this.theme.bg);
       grad.addColorStop(1, this.theme.bgBottom);
       this.ctx.fillStyle = grad;
     } else {
       this.ctx.fillStyle = this.theme.bg;
     }
-    this.ctx.fillRect(0, 0, this.width, this.height);
+    this.ctx.fillRect(-20, -20, this.width + 40, this.height + 40);
 
     if (this.theme.hasStars) {
       this.ctx.fillStyle = '#fff';
@@ -588,19 +622,19 @@ export class GameEngine {
 
     // Ground
     this.ctx.fillStyle = this.theme.groundTop;
-    this.ctx.fillRect(0, floorY, this.width, 20);
+    this.ctx.fillRect(-20, floorY, this.width + 40, 20);
     this.ctx.fillStyle = this.theme.groundBorder;
-    this.ctx.fillRect(0, floorY, this.width, 4); // border top
-    this.ctx.fillRect(0, floorY + 20, this.width, 4); // border bottom
+    this.ctx.fillRect(-20, floorY, this.width + 40, 4); // border top
+    this.ctx.fillRect(-20, floorY + 20, this.width + 40, 4); // border bottom
 
     this.ctx.fillStyle = this.theme.groundBottom;
-    this.ctx.fillRect(0, floorY + 24, this.width, this.groundHeight - 24);
+    this.ctx.fillRect(-20, floorY + 24, this.width + 40, this.groundHeight - 24 + 20);
 
     // Ground pattern (stripes)
     this.ctx.strokeStyle = this.theme.groundBorder;
     this.ctx.lineWidth = 4;
     this.ctx.beginPath();
-    for (let x = -40; x < this.width + 40; x += 40) {
+    for (let x = -40; x < this.width + 80; x += 40) {
       this.ctx.moveTo(x - this.groundOffset + 20, floorY + 4);
       this.ctx.lineTo(x - this.groundOffset, floorY + 20);
     }
@@ -611,7 +645,8 @@ export class GameEngine {
       this.ctx.fillStyle = pt.color;
       this.ctx.globalAlpha = Math.max(0, pt.life);
       this.ctx.beginPath();
-      this.ctx.arc(pt.x, pt.y, 2 + pt.life * 2, 0, Math.PI * 2);
+      // Particles shrink as they die
+      this.ctx.arc(pt.x, pt.y, pt.size * pt.life, 0, Math.PI * 2);
       this.ctx.fill();
     }
     this.ctx.globalAlpha = 1.0;
@@ -712,9 +747,12 @@ export class GameEngine {
     // Damage flash
     if (this.flashFrames > 0) {
       this.ctx.fillStyle = `rgba(255, 255, 255, ${this.flashFrames * 0.15})`;
-      this.ctx.fillRect(0, 0, this.width, this.height);
+      this.ctx.fillRect(-20, -20, this.width + 40, this.height + 40);
     }
     
+    // Restore base translation (un-apply screen shake)
+    this.ctx.restore();
+
     if (this.paused && this.state === 'playing') {
        this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
        this.ctx.fillRect(0, 0, this.width, this.height);
@@ -737,9 +775,22 @@ export class GameEngine {
   private triggerGameOver() {
     if (this.isDead) return;
     this.isDead = true;
+    
+    // JUICE: Screen shake & Hit stop
+    const enableShake = useGameStore.getState().enableShake;
+    if (enableShake) {
+      this.shakeFrames = 15;
+      this.hitStopFrames = 5; 
+    }
+    
     this.flashFrames = 5;
-    this.birdVelocity = Math.max(-4, Number(this.birdVelocity) - 4); // Small bounce up when dying
-    this.spawnParticles(40, this.birdY, '#ff4444', 30);
+    this.birdVelocity = Math.max(-4, Number(this.birdVelocity) - 4); 
+    
+    // EXPLOSIVE PARTICLE SPLATTER
+    const splatColors = ['#ff4444', '#ff8800', '#ffbb00', '#ffffff', this.theme.birdBody];
+    for(let i=0; i<30; i++) {
+       this.spawnParticles(40, this.birdY, splatColors[Math.floor(Math.random()*splatColors.length)], 1);
+    }
     audioContext.playCrash();
   }
 

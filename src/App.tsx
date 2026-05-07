@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX, Settings, Play, Trophy, Trash2, Pause, ArrowLeft, BarChart3, Medal, Bot, HardDrive, X } from 'lucide-react';
+import { Volume2, VolumeX, Settings, Play, Trophy, Trash2, Pause, ArrowLeft, BarChart3, Medal, Bot, HardDrive, X, Zap } from 'lucide-react';
 import { useGameStore, THEMES } from './store';
 import { audioContext } from './game/AudioEngine';
 import { GameEngine } from './game/GameEngine';
@@ -8,7 +8,7 @@ import { AiMenu } from './components/AiMenu';
 import { NeuralNetwork } from './game/NeuralNetwork';
 
 export default function App() {
-  const { screen, score, highScore, themeId, sfxVolume, musicVolume, hasSeenTutorial, stats, achievements, autoPlay, loadedBrain, setScreen, setScore, updateHighScore, setSfxVolume, setMusicVolume, setTheme, setAutoPlay, completeTutorial, updateStats, resetProgress } = useGameStore();
+  const { screen, score, highScore, themeId, sfxVolume, musicVolume, enableShake, hasSeenTutorial, stats, achievements, autoPlay, loadedBrain, setScreen, setScore, updateHighScore, setSfxVolume, setMusicVolume, setEnableShake, setTheme, setAutoPlay, completeTutorial, updateStats, resetProgress } = useGameStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
@@ -332,15 +332,15 @@ export default function App() {
               <h2 className="text-2xl text-yellow-400">SETTINGS</h2>
             </div>
             
-            <div className="flex flex-col gap-8">
-              <div className="flex flex-col gap-4">
-                <h3 className="text-sm text-neutral-400">THEME</h3>
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-xs text-neutral-400 font-bold tracking-widest">THEME</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {Object.values(THEMES).map(t => (
                     <button
                       key={t.id}
                       onClick={(e) => { e.stopPropagation(); setTheme(t.id as keyof typeof THEMES); }}
-                      className={`p-3 rounded-xl border-4 text-xs font-bold flex flex-col items-center gap-2 ${themeId === t.id ? 'border-green-500 bg-neutral-800' : 'border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800'}`}
+                      className={`p-3 rounded-xl border-4 text-xs font-bold flex flex-col items-center gap-2 transition-all ${themeId === t.id ? 'border-green-500 bg-neutral-800 scale-105 shadow-lg' : 'border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800 hover:scale-100'}`}
                     >
                       <div className="w-full h-12 rounded-lg border-2 border-black relative overflow-hidden" style={{ backgroundColor: t.bg }}>
                          <div className="absolute bottom-0 w-8 h-8 border-t-2 border-r-2 border-black" style={{ backgroundColor: t.pipeTop, borderColor: t.pipeBorder }}></div>
@@ -351,29 +351,50 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-4">
-                <h3 className="text-sm text-neutral-400">AUDIO</h3>
-                <div className="bg-neutral-800 p-4 rounded-xl flex flex-col gap-4 border-2 border-neutral-700">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-xs text-neutral-400 font-bold tracking-widest">AUDIO</h3>
+                <div className="bg-neutral-800 p-4 rounded-xl flex flex-col gap-4 border-2 border-neutral-700 shadow-md">
                   <div className="flex items-center gap-4">
                     <Volume2 size={24} className="text-neutral-400 shrink-0" />
                     <div className="w-full flex flex-col gap-2">
-                       <span className="text-[10px]">SFX: {sfxVolume}%</span>
+                       <span className="text-[10px] tracking-widest">SFX: {sfxVolume}%</span>
                        <input type="range" min="0" max="100" value={sfxVolume} onChange={(e) => setSfxVolume(parseInt(e.target.value))} onPointerDown={(e) => e.stopPropagation()} className="w-full accent-green-500" />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-4 mt-auto">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-xs text-neutral-400 font-bold tracking-widest">VISUAL EFFECTS (JUICE)</h3>
+                <div className="bg-neutral-800 p-4 rounded-xl flex flex-col gap-4 border-2 border-neutral-700 shadow-md">
+                  <label className="flex items-center justify-between cursor-pointer w-full">
+                    <div className="flex items-center gap-3">
+                      <Zap size={20} className={enableShake ? "text-yellow-400" : "text-neutral-500"} />
+                      <span className="text-xs font-bold tracking-wide">Screen Shake & Hit Stop</span>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={enableShake} 
+                      onChange={(e) => setEnableShake(e.target.checked)} 
+                      className="w-5 h-5 accent-yellow-400 cursor-pointer"
+                    />
+                  </label>
+                  <p className="text-[9px] text-neutral-400 leading-relaxed uppercase">
+                    Turn off if you are sensitive to flashing lights or rapid screen movements.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4 mt-4">
                 {resetConfirm ? (
-                  <div className="flex gap-2 w-full">
+                  <div className="flex gap-2 w-full animate-fade-in-scale">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         resetProgress();
                         setResetConfirm(false);
                       }}
-                      className="flex-1 p-4 border border-red-500 bg-red-950/30 text-red-500 rounded-xl hover:bg-red-900/50 text-xs font-bold"
+                      className="flex-1 p-4 border border-red-500 bg-red-950/30 text-red-500 rounded-xl hover:bg-red-900/50 text-xs font-bold tracking-wider"
                     >
                       CONFIRM RESET
                     </button>
@@ -382,7 +403,7 @@ export default function App() {
                         e.stopPropagation();
                         setResetConfirm(false);
                       }}
-                      className="flex-1 p-4 border border-neutral-700 bg-neutral-800 text-white rounded-xl hover:bg-neutral-700 text-xs font-bold"
+                      className="flex-1 p-4 border border-neutral-700 bg-neutral-800 text-white rounded-xl hover:bg-neutral-700 text-xs font-bold tracking-wider"
                     >
                       CANCEL
                     </button>
@@ -393,7 +414,7 @@ export default function App() {
                       e.stopPropagation();
                       setResetConfirm(true);
                     }}
-                    className="flex items-center justify-center gap-2 w-full p-4 border-2 border-red-900 text-red-500 rounded-xl hover:bg-red-950/30 text-xs"
+                    className="flex items-center justify-center gap-2 w-full p-4 border-2 border-red-900/50 text-red-500 rounded-xl hover:bg-red-950/30 text-xs tracking-wider font-bold transition-colors"
                   >
                     <Trash2 size={16} /> CLEAR SAVE DATA
                   </button>
